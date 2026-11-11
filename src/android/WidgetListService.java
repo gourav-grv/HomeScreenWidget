@@ -26,27 +26,22 @@ public class WidgetListService extends RemoteViewsService {
 
     @Override
     public RemoteViewsFactory onGetViewFactory(Intent intent) {
-        String key = intent == null ? null : intent.getStringExtra(WidgetStore.EXTRA_KEY);
-        return new Factory(getApplicationContext(), WidgetStore.key(key));
+        return new Factory(getApplicationContext());
     }
 
     static class Factory implements RemoteViewsFactory {
         private final Context context;
-        private final String key;
         private JSONArray rows = new JSONArray();
         private int accent = WidgetStore.DEFAULT_ACCENT;
         private String dataDeepLink = "";
 
-        Factory(Context context, String key) {
-            this.context = context;
-            this.key = key;
-        }
+        Factory(Context context) { this.context = context; }
 
         @Override public void onCreate() { }
 
         @Override
         public void onDataSetChanged() {
-            JSONObject d = WidgetStore.load(context, key);
+            JSONObject d = WidgetStore.load(context);
             JSONArray a = d.optJSONArray("Rows");
             rows = a == null ? new JSONArray() : a;
             accent = WidgetStore.accent(d);
@@ -83,7 +78,6 @@ public class WidgetListService extends RemoteViewsService {
                 tap.put("ActionType", "openApp");
                 tap.put("ActionName", "RowTap");
                 tap.put("RowId", row.optString("Id", ""));
-                tap.put("WidgetKey", key);
                 String dl = row.optString("DeepLink", "");
                 tap.put("DeepLink", dl.isEmpty() ? dataDeepLink : dl);
             } catch (Exception ignored) { }
@@ -177,7 +171,6 @@ public class WidgetListService extends RemoteViewsService {
                 a.put("ActionType", b.optString("ActionType", "openApp"));
                 a.put("ActionName", b.optString("ActionName", ""));
                 a.put("RowId", row.optString("Id", ""));
-                a.put("WidgetKey", key);
                 a.put("ButtonId", b.optString("Id", ""));
                 a.put("Payload", b.optString("Payload", ""));
                 a.put("Url", b.optString("Url", ""));

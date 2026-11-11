@@ -28,25 +28,21 @@ function dispatch(event) {
  * Action event delivered to onAction listeners:
  * { ActionType, ActionName, RowId, ButtonId, Payload }
  */
-/**
- * Widget types come from the app's config.xml preference HSWWidgetTypes ("key|Label;key2|Label2").
- * Every method below takes the widget type key; empty = "main" (the single default type).
- */
 module.exports = {
-    update: function (data, widgetKey) {
+    update: function (data) {
         var json = typeof data === 'string' ? data : JSON.stringify(data || {});
-        return call('update', [json, widgetKey || '']);
+        return call('update', [json]);
     },
-    clear: function (widgetKey) { return call('clear', [widgetKey || '']); },
+    clear: function () { return call('clear'); },
     isSupported: function () { return call('isSupported'); },
-    requestPin: function (widgetKey) { return call('requestPin', [widgetKey || '']); },
+    requestPin: function () { return call('requestPin'); },
     /** Headers sent with http actions and RefreshUrl, e.g. { "Authorization": "Bearer ..." }. */
     setHeaders: function (headers) {
         var json = typeof headers === 'string' ? headers : JSON.stringify(headers || {});
         return call('setHeaders', [json]);
     },
     /** Fetches RefreshUrl now (if set) and re-renders the widget. */
-    refresh: function (widgetKey) { return call('refresh', [widgetKey || '']); },
+    refresh: function () { return call('refresh'); },
     /**
      * Registers a listener for widget taps (clientAction / openApp). Actions tapped while the app
      * was closed are delivered as soon as the first listener registers. Returns an unsubscribe function.

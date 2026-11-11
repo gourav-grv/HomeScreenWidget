@@ -7,16 +7,13 @@ import android.graphics.Color;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-/** Storage shared by the plugin, the widget providers and the action activity. Data is stored per widget type (key). */
+/** Storage shared by the plugin, the widget provider and the action activity. */
 final class WidgetStore {
     private static final String PREFS = "hsw_widget_prefs";
-    private static final String KEY_DATA = "data_";
+    private static final String KEY_DATA = "data";
     private static final String KEY_HEADERS = "headers";
     private static final String KEY_PENDING = "pending";
     static final String EXTRA_ACTION = "hsw_action";
-    static final String EXTRA_KEY = "hsw_key";
-    static final String DEFAULT_KEY = "main";
-    static final String PROVIDER_PREFIX = "HswWidget_";
     static final int MAX_ROWS = 25;
     static final int DEFAULT_ACCENT = 0xFF1068EB;
 
@@ -26,38 +23,30 @@ final class WidgetStore {
         return c.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 
-    /** Widget type keys are limited to letters, digits and underscore (they become class names). */
-    static String key(String raw) {
-        String k = raw == null ? "" : raw.trim().replaceAll("[^A-Za-z0-9_]", "_");
-        return k.isEmpty() ? DEFAULT_KEY : k;
+    // ---- widget data
+    static void save(Context c, String json) { prefs(c).edit().putString(KEY_DATA, json).apply(); }
+
+    static void clear(Context c) { prefs(c).edit().remove(KEY_DATA).apply(); }
+
+    static JSONObject load(Context c) {
+        return parse(prefs(c).getString(KEY_DATA, null));
     }
 
-    /** io.homescreenwidget.plugin.HswWidget_pending -> "pending" */
-    static String keyFromClassName(String className) {
-        int i = className == null ? -1 : className.lastIndexOf(PROVIDER_PREFIX);
-        return i < 0 ? DEFAULT_KEY : key(className.substring(i + PROVIDER_PREFIX.length()));
+    static JSONArray rows(Context c) {
+        JSONArray a = load(c).optJSONArray("Rows");
+        return a == null ? new JSONArray() : a;
     }
 
-    static String providerClassName(String key) {
-        return "io.homescreenwidget.plugin." + PROVIDER_PREFIX + key(key);
-    }
-
-    // ---- widget data (per key)
-    static void save(Context c, String key, String json) { prefs(c).edit().putString(KEY_DATA + key(key), json).apply(); }
-
-    static void clear(Context c, String key) { prefs(c).edit().remove(KEY_DATA + key(key)).apply(); }
-
-    static JSONObject load(Context c, String key) { return parse(prefs(c).getString(KEY_DATA + key(key), null)); }
-
-    // ---- HTTP headers (global)
+    // ---- HTTP headers (e.g. Authorization) used by http actions and RefreshUrl
     static void setHeaders(Context c, String json) { prefs(c).edit().putString(KEY_HEADERS, json).apply(); }
 
     static JSONObject headers(Context c) { return parse(prefs(c).getString(KEY_HEADERS, null)); }
 
-    // ---- actions waiting for the app
+    // ---- actions waiting for the app (clientAction / row taps while the app was closed)
     static synchronized void addPending(Context c, JSONObject action) {
         JSONArray a = parseArray(prefs(c).getString(KEY_PENDING, null));
         a.put(action);
+        // keep the queue small
         JSONArray trimmed = new JSONArray();
         for (int i = Math.max(0, a.length() - 20); i < a.length(); i++) trimmed.put(a.opt(i));
         prefs(c).edit().putString(KEY_PENDING, trimmed.toString()).commit();
@@ -90,6 +79,7 @@ final class WidgetStore {
         }
     }
 
+    /** True when the JSON looks like widget data (used for http responses). */
     static boolean isWidgetData(JSONObject o) {
         return o != null && (o.has("Rows") || o.has("Title"));
     }

@@ -88,20 +88,17 @@ public class HomeScreenWidgetPlugin extends CordovaPlugin {
             switch (action) {
                 case "update": {
                     String json = args.optString(0, "{}");
-                    String key = WidgetStore.key(args.optString(1, ""));
                     new JSONObject(json); // validate
-                    WidgetStore.save(c, key, json);
-                    GenericWidgetProvider.refreshKey(c, key);
+                    WidgetStore.save(c, json);
+                    GenericWidgetProvider.refreshAll(c);
                     cb.success();
                     break;
                 }
-                case "clear": {
-                    String key = WidgetStore.key(args.optString(0, ""));
-                    WidgetStore.clear(c, key);
-                    GenericWidgetProvider.refreshKey(c, key);
+                case "clear":
+                    WidgetStore.clear(c);
+                    GenericWidgetProvider.refreshAll(c);
                     cb.success();
                     break;
-                }
                 case "setHeaders": {
                     String json = args.optString(0, "{}");
                     new JSONObject(json);
@@ -110,23 +107,21 @@ public class HomeScreenWidgetPlugin extends CordovaPlugin {
                     break;
                 }
                 case "refresh": {
-                    String key = WidgetStore.key(args.optString(0, ""));
-                    String url = WidgetStore.load(c, key).optString("RefreshUrl", "");
-                    if (!url.isEmpty()) WidgetHttp.requestAndStore(c, key, url, "GET", null);
-                    GenericWidgetProvider.refreshKey(c, key);
+                    String url = WidgetStore.load(c).optString("RefreshUrl", "");
+                    if (!url.isEmpty()) WidgetHttp.requestAndStore(c, url, "GET", null);
+                    GenericWidgetProvider.refreshAll(c);
                     cb.success();
                     break;
                 }
                 case "isSupported":
-                    cb.sendPluginResult(new PluginResult(PluginResult.Status.OK, !GenericWidgetProvider.providers(c).isEmpty()));
+                    cb.sendPluginResult(new PluginResult(PluginResult.Status.OK, true));
                     break;
                 case "requestPin": {
-                    String key = WidgetStore.key(args.optString(0, ""));
                     boolean ok = false;
                     if (Build.VERSION.SDK_INT >= 26) {
                         AppWidgetManager m = AppWidgetManager.getInstance(c);
                         if (m.isRequestPinAppWidgetSupported()) {
-                            ok = m.requestPinAppWidget(new ComponentName(c.getPackageName(), WidgetStore.providerClassName(key)), null, null);
+                            ok = m.requestPinAppWidget(new ComponentName(c, GenericWidgetProvider.class), null, null);
                         }
                     }
                     cb.sendPluginResult(new PluginResult(PluginResult.Status.OK, ok));
