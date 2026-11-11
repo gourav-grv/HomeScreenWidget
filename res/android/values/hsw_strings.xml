@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hsw_widget_description">Quick view of your app on the home screen</string>
+    <string name="hsw_empty_default">Nothing to show. Open the app to sync.</string>
+</resources>

@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        id="cordova-plugin-homescreen-widget"
+        version="2.0.0">
+
+    <name>HomeScreenWidget</name>
+    <description>Dynamic home screen widget (Android App Widget + iOS WidgetKit). The app pushes JSON (header + rows + buttons); buttons can call an HTTP endpoint, a client action in the app, or open the app.</description>
+    <license>MIT</license>
+
+    <engines>
+        <engine name="cordova" version=">=9.0.0" />
+        <engine name="cordova-android" version=">=9.0.0" />
+        <engine name="cordova-ios" version=">=6.0.0" />
+    </engines>
+
+    <js-module src="www/HomeScreenWidget.js" name="HomeScreenWidget">
+        <clobbers target="HomeScreenWidget" />
+    </js-module>
+
+    <!-- ===================================================== ANDROID -->
+    <platform name="android">
+        <config-file target="res/xml/config.xml" parent="/*">
+            <feature name="HomeScreenWidget">
+                <param name="android-package" value="io.homescreenwidget.plugin.HomeScreenWidgetPlugin" />
+                <param name="onload" value="true" />
+            </feature>
+        </config-file>
+
+        <config-file target="AndroidManifest.xml" parent="/manifest/application">
+            <receiver android:name="io.homescreenwidget.plugin.GenericWidgetProvider"
+                      android:exported="true"
+                      android:label="@string/app_name">
+                <intent-filter>
+                    <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                </intent-filter>
+                <meta-data android:name="android.appwidget.provider"
+                           android:resource="@xml/hsw_widget_info" />
+            </receiver>
+            <service android:name="io.homescreenwidget.plugin.WidgetListService"
+                     android:permission="android.permission.BIND_REMOTEVIEWS"
+                     android:exported="false" />
+            <activity android:name="io.homescreenwidget.plugin.WidgetActionActivity"
+                      android:theme="@style/HswTransparent"
+                      android:exported="false"
+                      android:excludeFromRecents="true"
+                      android:noHistory="true"
+                      android:taskAffinity=""
+                      android:launchMode="standard" />
+        </config-file>
+
+        <config-file target="AndroidManifest.xml" parent="/manifest">
+            <uses-permission android:name="android.permission.INTERNET" />
+        </config-file>
+
+        <source-file src="src/android/HomeScreenWidgetPlugin.java" target-dir="src/io/homescreenwidget/plugin" />
+        <source-file src="src/android/GenericWidgetProvider.java" target-dir="src/io/homescreenwidget/plugin" />
+        <source-file src="src/android/WidgetListService.java" target-dir="src/io/homescreenwidget/plugin" />
+        <source-file src="src/android/WidgetStore.java" target-dir="src/io/homescreenwidget/plugin" />
+        <source-file src="src/android/WidgetHttp.java" target-dir="src/io/homescreenwidget/plugin" />
+        <source-file src="src/android/WidgetActionActivity.java" target-dir="src/io/homescreenwidget/plugin" />
+
+        <resource-file src="res/android/layout/hsw_widget.xml" target="res/layout/hsw_widget.xml" />
+        <resource-file src="res/android/layout/hsw_row_item.xml" target="res/layout/hsw_row_item.xml" />
+        <resource-file src="res/android/layout/hsw_row_text.xml" target="res/layout/hsw_row_text.xml" />
+        <resource-file src="res/android/layout/hsw_row_progress.xml" target="res/layout/hsw_row_progress.xml" />
+        <resource-file src="res/android/layout/hsw_row_image.xml" target="res/layout/hsw_row_image.xml" />
+        <resource-file src="res/android/drawable/hsw_bg.xml" target="res/drawable/hsw_bg.xml" />
+        <resource-file src="res/android/drawable/hsw_btn_bg.xml" target="res/drawable/hsw_btn_bg.xml" />
+        <resource-file src="res/android/xml/hsw_widget_info.xml" target="res/xml/hsw_widget_info.xml" />
+        <resource-file src="res/android/values/hsw_strings.xml" target="res/values/hsw_strings.xml" />
+        <resource-file src="res/android/values/hsw_styles.xml" target="res/values/hsw_styles.xml" />
+    </platform>
+
+    <!-- ===================================================== iOS -->
+    <platform name="ios">
+        <!-- App Group defaults to group.<bundle id> (override with preference HSWAppGroup);
+             optional preference HSWWidgetProfile = provisioning profile of the widget extension. -->
+        <config-file target="config.xml" parent="/*">
+            <feature name="HomeScreenWidget">
+                <param name="ios-package" value="HomeScreenWidgetPlugin" />
+                <param name="onload" value="true" />
+            </feature>
+            <preference name="SwiftVersion" value="5" />
+        </config-file>
+
+        <!-- URL scheme used by widget taps to reach the app: hsw-<app id>://action?a=... -->
+        <config-file target="*-Info.plist" parent="CFBundleURLTypes">
+            <array>
+                <dict>
+                    <key>CFBundleURLName</key>
+                    <string>hsw-widget</string>
+                    <key>CFBundleURLSchemes</key>
+                    <array>
+                        <string>hsw-$PACKAGE_NAME</string>
+                    </array>
+                </dict>
+            </array>
+        </config-file>
+
+        <source-file src="src/ios/HomeScreenWidgetPlugin.swift" />
+        <framework src="WidgetKit.framework" weak="true" />
+
+        <hook type="after_prepare" src="hooks/ios/add_widget_extension.js" />
+    </platform>
+</plugin>

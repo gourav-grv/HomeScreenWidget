@@ -1,0 +1,14 @@
+{
+  "name": "cordova-plugin-homescreen-widget",
+  "version": "1.0.0",
+  "description": "Generic home screen widget for Cordova / OutSystems mobile apps (Android App Widget + iOS WidgetKit).",
+  "cordova": {
+    "id": "cordova-plugin-homescreen-widget",
+    "platforms": ["android", "ios"]
+  },
+  "keywords": ["ecosystem:cordova", "cordova-android", "cordova-ios", "widget", "outsystems"],
+  "license": "MIT",
+  "dependencies": {
+    "xcode": "^3.0.1"
+  }
+}
