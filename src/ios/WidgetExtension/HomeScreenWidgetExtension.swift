@@ -15,7 +15,7 @@ enum HSWShared {
     }
 
     /// Runs a request with the stored headers; stores the response when it is widget data.
-    static func request(url: String, method: String?, body: String?) async {
+    static func request(key: String, url: String, method: String?, body: String?) async {
         guard let u = URL(string: url) else { return }
         var req = URLRequest(url: u, timeoutInterval: 10)
         let hasBody = !(body ?? "").isEmpty
@@ -32,7 +32,7 @@ enum HSWShared {
               let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
               let text = String(data: data, encoding: .utf8),
               let obj = object(text), obj["Rows"] != nil || obj["Title"] != nil else { return }
-        defaults?.set(text, forKey: "hsw_data")
+        defaults?.set(text, forKey: "hsw_data_" + key)
     }
 }
 
@@ -69,9 +69,12 @@ struct HSWData {
     var accent = Color(red: 0x10 / 255, green: 0x68 / 255, blue: 0xEB / 255)
     var rows: [HSWRow] = []
 
-    static func load() -> HSWData {
+    var key = "main"
+
+    static func load(_ key: String) -> HSWData {
         var d = HSWData()
-        guard let obj = HSWShared.object(HSWShared.defaults?.string(forKey: "hsw_data")) else { return d }
+        d.key = key
+        guard let obj = HSWShared.object(HSWShared.defaults?.string(forKey: "hsw_data_" + key)) else { return d }
         d.title = obj["Title"] as? String ?? ""
         d.subtitle = obj["Subtitle"] as? String ?? ""
         d.count = (obj["Count"] as? NSNumber)?.intValue ?? 0
@@ -115,14 +118,14 @@ struct HSWData {
     }
 
     func rowAction(_ row: HSWRow) -> [String: Any] {
-        ["ActionType": "openApp", "ActionName": "RowTap", "RowId": row.id,
+        ["ActionType": "openApp", "ActionName": "RowTap", "RowId": row.id, "WidgetKey": key,
          "DeepLink": row.deepLink.isEmpty ? deepLink : row.deepLink]
     }
 
     func buttonAction(_ row: HSWRow, _ b: HSWButton) -> [String: Any] {
         ["ActionType": b.actionType,
          "ActionName": b.raw["ActionName"] as? String ?? "",
-         "RowId": row.id, "ButtonId": b.id,
+         "RowId": row.id, "ButtonId": b.id, "WidgetKey": key,
          "Payload": b.raw["Payload"] as? String ?? "",
          "Url": b.raw["Url"] as? String ?? "",
          "Method": b.raw["Method"] as? String ?? "",
@@ -146,23 +149,25 @@ struct HSWHttpIntent: AppIntent {
     static var title: LocalizedStringResource = "Widget action"
     static var isDiscoverable: Bool = false
 
+    @Parameter(title: "Key") var key: String
     @Parameter(title: "Url") var url: String
     @Parameter(title: "Method") var method: String
     @Parameter(title: "Body") var body: String
 
     init() {}
 
-    init(url: String, method: String, body: String) {
+    init(key: String, url: String, method: String, body: String) {
+        self.key = key
         self.url = url
         self.method = method
         self.body = body
     }
 
     func perform() async throws -> some IntentResult {
-        await HSWShared.request(url: url, method: method, body: body)
-        let data = HSWData.load()
+        await HSWShared.request(key: key, url: url, method: method, body: body)
+        let data = HSWData.load(key)
         if !data.refreshUrl.isEmpty, data.refreshUrl != url {
-            await HSWShared.request(url: data.refreshUrl, method: "GET", body: nil)
+            await HSWShared.request(key: key, url: data.refreshUrl, method: "GET", body: nil)
         }
         return .result()
     }
@@ -177,6 +182,8 @@ struct HSWEntry: TimelineEntry {
 }
 
 struct HSWProvider: TimelineProvider {
+    let key: String
+
     func placeholder(in context: Context) -> HSWEntry {
         var d = HSWData()
         d.title = "Tasks"
@@ -189,15 +196,15 @@ struct HSWProvider: TimelineProvider {
 
     func getSnapshot(in context: Context, completion: @escaping (HSWEntry) -> Void) {
         if context.isPreview { return completion(placeholder(in: context)) }
-        completion(HSWEntry(date: Date(), data: HSWData.load(), images: [:]))
+        completion(HSWEntry(date: Date(), data: HSWData.load(key), images: [:]))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<HSWEntry>) -> Void) {
         Task {
-            var data = HSWData.load()
+            var data = HSWData.load(key)
             if !data.refreshUrl.isEmpty {
-                await HSWShared.request(url: data.refreshUrl, method: "GET", body: nil)
-                data = HSWData.load()
+                await HSWShared.request(key: key, url: data.refreshUrl, method: "GET", body: nil)
+                data = HSWData.load(key)
             }
             var images: [String: UIImage] = [:]
             for row in data.rows where row.type == "image" && !row.imageUrl.isEmpty {
@@ -266,7 +273,7 @@ struct HSWView: View {
             }
         }
         .padding(family == .systemSmall ? 2 : 4)
-        .widgetURL(d.actionURL(["ActionType": "openApp", "ActionName": "Open", "DeepLink": d.deepLink]))
+        .widgetURL(d.actionURL(["ActionType": "openApp", "ActionName": "Open", "WidgetKey": d.key, "DeepLink": d.deepLink]))
     }
 
     @ViewBuilder
@@ -331,7 +338,7 @@ struct HSWView: View {
         let isHttp = b.actionType.caseInsensitiveCompare("http") == .orderedSame
         if isHttp {
             if #available(iOSApplicationExtension 17.0, *) {
-                Button(intent: HSWHttpIntent(url: b.raw["Url"] as? String ?? "",
+                Button(intent: HSWHttpIntent(key: d.key, url: b.raw["Url"] as? String ?? "",
                                              method: b.raw["Method"] as? String ?? "",
                                              body: b.raw["Body"] as? String ?? "")) { label }
                     .buttonStyle(.plain)
@@ -363,16 +370,13 @@ struct HSWBackground: ViewModifier {
     }
 }
 
-@main
-struct HomeScreenWidget: Widget {
-    let kind = "HomeScreenWidget"
-
-    var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: HSWProvider()) { entry in
-            HSWView(entry: entry).modifier(HSWBackground())
-        }
-        .configurationDisplayName(Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "Widget")
-        .description("Quick view of your app on the home screen")
-        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+/// One widget type. The hook generates HSWWidgetTypes.swift: a Widget struct per
+/// HSWWidgetTypes entry plus the @main WidgetBundle, each calling this.
+func hswConfiguration(key: String, name: String) -> some WidgetConfiguration {
+    StaticConfiguration(kind: "HSW_" + key, provider: HSWProvider(key: key)) { entry in
+        HSWView(entry: entry).modifier(HSWBackground())
     }
+    .configurationDisplayName(name)
+    .description("Quick view of your app on the home screen")
+    .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
 }

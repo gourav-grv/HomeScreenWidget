@@ -7,7 +7,7 @@ import WidgetKit
 @objc(HomeScreenWidgetPlugin)
 class HomeScreenWidgetPlugin: CDVPlugin {
 
-    static let dataKey = "hsw_data"
+    static let dataPrefix = "hsw_data_"
     static let headersKey = "hsw_headers"
     static let pendingKey = "hsw_pending"
 
@@ -25,20 +25,28 @@ class HomeScreenWidgetPlugin: CDVPlugin {
 
     // MARK: - commands
 
+    static func widgetKey(_ raw: Any?) -> String {
+        let s = ((raw as? String) ?? "").trimmingCharacters(in: .whitespaces)
+        let cleaned = String(s.map { ($0.isLetter || $0.isNumber || $0 == "_") ? $0 : "_" })
+        return cleaned.isEmpty ? "main" : cleaned
+    }
+
     @objc(update:)
     func update(_ command: CDVInvokedUrlCommand) {
         guard let defaults = shared else { return fail(command, "App Group is not configured.") }
         let json = (command.argument(at: 0) as? String) ?? "{}"
+        let key = Self.widgetKey(command.argument(at: 1))
         guard isJSONObject(json) else { return fail(command, "Payload is not valid JSON.") }
-        defaults.set(json, forKey: Self.dataKey)
-        reloadWidgets()
+        defaults.set(json, forKey: Self.dataPrefix + key)
+        reloadWidgets(key)
         ok(command)
     }
 
     @objc(clear:)
     func clear(_ command: CDVInvokedUrlCommand) {
-        shared?.removeObject(forKey: Self.dataKey)
-        reloadWidgets()
+        let key = Self.widgetKey(command.argument(at: 0))
+        shared?.removeObject(forKey: Self.dataPrefix + key)
+        reloadWidgets(key)
         ok(command)
     }
 
@@ -52,15 +60,16 @@ class HomeScreenWidgetPlugin: CDVPlugin {
 
     @objc(refresh:)
     func refresh(_ command: CDVInvokedUrlCommand) {
+        let key = Self.widgetKey(command.argument(at: 0))
         guard let defaults = shared,
-              let raw = defaults.string(forKey: Self.dataKey),
+              let raw = defaults.string(forKey: Self.dataPrefix + key),
               let obj = parseObject(raw),
               let url = obj["RefreshUrl"] as? String, !url.isEmpty else {
-            reloadWidgets()
+            reloadWidgets(key)
             return ok(command)
         }
-        performRequest(url: url, method: "GET", body: nil) { [weak self] in
-            self?.reloadWidgets()
+        performRequest(key: key, url: url, method: "GET", body: nil) { [weak self] in
+            self?.reloadWidgets(key)
             self?.ok(command)
         }
     }
@@ -105,8 +114,9 @@ class HomeScreenWidgetPlugin: CDVPlugin {
         if type.caseInsensitiveCompare("http") == .orderedSame {
             // iOS < 17 fallback: the widget opened the app; run the request here.
             if let target = action["Url"] as? String, !target.isEmpty {
-                performRequest(url: target, method: action["Method"] as? String, body: action["Body"] as? String) { [weak self] in
-                    self?.reloadWidgets()
+                let key = Self.widgetKey(action["WidgetKey"])
+                performRequest(key: key, url: target, method: action["Method"] as? String, body: action["Body"] as? String) { [weak self] in
+                    self?.reloadWidgets(key)
                 }
             }
             return
@@ -114,6 +124,7 @@ class HomeScreenWidgetPlugin: CDVPlugin {
         let event: [String: Any] = [
             "ActionType": type,
             "ActionName": action["ActionName"] as? String ?? "",
+            "WidgetKey": action["WidgetKey"] as? String ?? "",
             "RowId": action["RowId"] as? String ?? "",
             "ButtonId": action["ButtonId"] as? String ?? "",
             "Payload": action["Payload"] as? String ?? ""
@@ -137,7 +148,7 @@ class HomeScreenWidgetPlugin: CDVPlugin {
         commandDelegate.send(r, callbackId: id)
     }
 
-    private func performRequest(url: String, method: String?, body: String?, done: @escaping () -> Void) {
+    private func performRequest(key: String, url: String, method: String?, body: String?, done: @escaping () -> Void) {
         guard let u = URL(string: url) else { return done() }
         var req = URLRequest(url: u, timeoutInterval: 10)
         let hasBody = !(body ?? "").isEmpty
@@ -156,7 +167,7 @@ class HomeScreenWidgetPlugin: CDVPlugin {
                let data = data,
                let text = String(data: data, encoding: .utf8),
                let obj = self.parseObject(text), obj["Rows"] != nil || obj["Title"] != nil {
-                self.shared?.set(text, forKey: Self.dataKey)
+                self.shared?.set(text, forKey: Self.dataPrefix + key)
             }
             DispatchQueue.main.async { done() }
         }.resume()
@@ -169,8 +180,14 @@ class HomeScreenWidgetPlugin: CDVPlugin {
 
     private func isJSONObject(_ raw: String) -> Bool { parseObject(raw) != nil }
 
-    private func reloadWidgets() {
-        if #available(iOS 14.0, *) { WidgetCenter.shared.reloadAllTimelines() }
+    private func reloadWidgets(_ key: String? = nil) {
+        if #available(iOS 14.0, *) {
+            if let key = key {
+                WidgetCenter.shared.reloadTimelines(ofKind: "HSW_" + key)
+            } else {
+                WidgetCenter.shared.reloadAllTimelines()
+            }
+        }
     }
 
     private func ok(_ command: CDVInvokedUrlCommand) { send(command, CDVPluginResult(status: CDVCommandStatus_OK)) }

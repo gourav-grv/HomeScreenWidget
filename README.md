@@ -3,15 +3,24 @@
 Dynamic home screen widget for Cordova / OutSystems mobile apps: Android App Widget and iOS WidgetKit.
 The app sends JSON (header + rows + buttons) and the widget renders it natively.
 
+## Multiple widget types
+Each widget type shows up as its own entry in the widget gallery. Declare the types in the app's config.xml (OutSystems: the app's Extensibility Configurations):
+```json
+{ "preferences": { "global": [ { "name": "HSWWidgetTypes", "value": "pending|Pending Tasks;done|Done Today" } ] } }
+```
+The format is `key|Label` separated by `;`. A key may contain letters, digits and `_`. Without the preference there is one type, `main`, labelled with the app name.
+The build hooks generate one Android provider (`HswWidget_<key>`) and one iOS widget (kind `HSW_<key>`) per type. iOS supports up to 10 types.
+Every data call takes the type key: `update(data, "pending")`.
+
 ## JavaScript API (`window.HomeScreenWidget`)
 | Method | Description |
 |---|---|
-| `update(data)` | Saves the widget data and refreshes the widget |
-| `clear()` | Removes the data |
+| `update(data, key)` | Saves the data of one widget type and refreshes it |
+| `clear(key)` | Removes the data of one widget type |
 | `isSupported()` | Resolves `true` when the widget can be shown |
-| `requestPin()` | Android 8+: asks the launcher to add the widget |
+| `requestPin(key)` | Android 8+: asks the launcher to add that widget type |
 | `setHeaders(obj)` | Headers for `http` actions and `RefreshUrl`, e.g. `{ "Authorization": "Bearer …" }` |
-| `refresh()` | Fetches `RefreshUrl` now |
+| `refresh(key)` | Fetches that type's `RefreshUrl` now |
 | `onAction(cb)` | Listener for `clientAction` / `openApp` taps. Returns an unsubscribe function. Taps made while the app was closed are delivered when the first listener registers. |
 
 ## Data

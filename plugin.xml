@@ -2,7 +2,7 @@
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
         xmlns:android="http://schemas.android.com/apk/res/android"
         id="cordova-plugin-homescreen-widget"
-        version="2.0.0">
+        version="2.1.0">
 
     <name>HomeScreenWidget</name>
     <description>Dynamic home screen widget (Android App Widget + iOS WidgetKit). The app pushes JSON (header + rows + buttons); buttons can call an HTTP endpoint, a client action in the app, or open the app.</description>
@@ -28,15 +28,9 @@
         </config-file>
 
         <config-file target="AndroidManifest.xml" parent="/manifest/application">
-            <receiver android:name="io.homescreenwidget.plugin.GenericWidgetProvider"
-                      android:exported="true"
-                      android:label="@string/app_name">
-                <intent-filter>
-                    <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                </intent-filter>
-                <meta-data android:name="android.appwidget.provider"
-                           android:resource="@xml/hsw_widget_info" />
-            </receiver>
+            <!-- Widget providers (one per widget type) are added by hooks/android/add_widget_types.js -->
+            <receiver android:name="io.homescreenwidget.plugin.WidgetHttpReceiver"
+                      android:exported="false" />
             <service android:name="io.homescreenwidget.plugin.WidgetListService"
                      android:permission="android.permission.BIND_REMOTEVIEWS"
                      android:exported="false" />
@@ -59,6 +53,9 @@
         <source-file src="src/android/WidgetStore.java" target-dir="src/io/homescreenwidget/plugin" />
         <source-file src="src/android/WidgetHttp.java" target-dir="src/io/homescreenwidget/plugin" />
         <source-file src="src/android/WidgetActionActivity.java" target-dir="src/io/homescreenwidget/plugin" />
+        <source-file src="src/android/WidgetHttpReceiver.java" target-dir="src/io/homescreenwidget/plugin" />
+
+        <hook type="after_prepare" src="hooks/android/add_widget_types.js" />
 
         <resource-file src="res/android/layout/hsw_widget.xml" target="res/layout/hsw_widget.xml" />
         <resource-file src="res/android/layout/hsw_row_item.xml" target="res/layout/hsw_row_item.xml" />

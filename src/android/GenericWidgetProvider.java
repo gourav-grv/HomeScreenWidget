@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ResolveInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.view.View;
@@ -13,24 +14,35 @@ import android.widget.RemoteViews;
 
 import org.json.JSONObject;
 
-/** Renders the stored JSON (header + rows) and runs http actions / RefreshUrl in the background. */
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Base widget provider. The build hook generates one subclass per widget type
+ * (io.homescreenwidget.plugin.HswWidget_<key>) and registers it in the manifest;
+ * the key is taken from the class name.
+ */
 public class GenericWidgetProvider extends AppWidgetProvider {
 
-    static final String ACTION_HTTP = "io.homescreenwidget.plugin.ACTION_HTTP";
+    /** Widget type key of this provider (from the generated class name). */
+    protected String widgetKey() {
+        return WidgetStore.keyFromClassName(getClass().getName());
+    }
 
     @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
-        for (int id : ids) render(context, manager, id);
+        final String key = widgetKey();
+        for (int id : ids) render(context, manager, id, key);
         manager.notifyAppWidgetViewDataChanged(ids, WidgetStore.res(context, "id", "hsw_list"));
 
-        // Periodic refresh: if the data has a RefreshUrl, fetch fresh data without opening the app.
-        final String refreshUrl = WidgetStore.load(context).optString("RefreshUrl", "");
+        // Periodic refresh: if this type has a RefreshUrl, fetch fresh data without opening the app.
+        final String refreshUrl = WidgetStore.load(context, key).optString("RefreshUrl", "");
         if (!refreshUrl.isEmpty()) {
             final PendingResult pending = goAsync();
             final Context app = context.getApplicationContext();
             new Thread(() -> {
                 try {
-                    if (WidgetHttp.requestAndStore(app, refreshUrl, "GET", null)) refreshAll(app);
+                    if (WidgetHttp.requestAndStore(app, key, refreshUrl, "GET", null)) refreshKey(app, key);
                 } finally {
                     pending.finish();
                 }
@@ -38,44 +50,57 @@ public class GenericWidgetProvider extends AppWidgetProvider {
         }
     }
 
-    @Override
-    public void onReceive(Context context, Intent intent) {
-        if (intent != null && ACTION_HTTP.equals(intent.getAction())) {
-            final JSONObject a = WidgetStore.parse(intent.getStringExtra(WidgetStore.EXTRA_ACTION));
-            final PendingResult pending = goAsync();
-            final Context app = context.getApplicationContext();
-            new Thread(() -> {
-                try {
-                    String url = a.optString("Url", "");
-                    if (!url.isEmpty()) {
-                        boolean changed = WidgetHttp.requestAndStore(app, url, a.optString("Method", ""), a.optString("Body", ""));
-                        // Response was not widget data: re-read from RefreshUrl if there is one.
-                        if (!changed) {
-                            String refreshUrl = WidgetStore.load(app).optString("RefreshUrl", "");
-                            if (!refreshUrl.isEmpty()) WidgetHttp.requestAndStore(app, refreshUrl, "GET", null);
-                        }
-                    }
-                    refreshAll(app);
-                } finally {
-                    pending.finish();
-                }
-            }).start();
-            return;
+    /** All widget provider components of this app (one per widget type). */
+    static List<ComponentName> providers(Context c) {
+        List<ComponentName> out = new ArrayList<>();
+        Intent probe = new Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
+        probe.setPackage(c.getPackageName());
+        List<ResolveInfo> list = c.getPackageManager().queryBroadcastReceivers(probe, 0);
+        if (list == null) return out;
+        for (ResolveInfo ri : list) {
+            if (ri.activityInfo == null) continue;
+            if (!ri.activityInfo.name.contains(WidgetStore.PROVIDER_PREFIX)) continue;
+            out.add(new ComponentName(ri.activityInfo.packageName, ri.activityInfo.name));
         }
-        super.onReceive(context, intent);
+        return out;
     }
 
-    /** Re-renders every placed widget of this app. */
+    /** Re-renders every placed widget of every type. */
     static void refreshAll(Context context) {
+        for (ComponentName cn : providers(context)) refreshComponent(context, cn);
+    }
+
+    /** Re-renders every placed widget of one type. */
+    static void refreshKey(Context context, String key) {
+        String cls = WidgetStore.providerClassName(key);
+        for (ComponentName cn : providers(context)) {
+            if (cn.getClassName().equals(cls)) refreshComponent(context, cn);
+        }
+    }
+
+    private static void refreshComponent(Context context, ComponentName cn) {
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
-        int[] ids = manager.getAppWidgetIds(new ComponentName(context, GenericWidgetProvider.class));
+        int[] ids = manager.getAppWidgetIds(cn);
         if (ids == null || ids.length == 0) return;
-        for (int id : ids) render(context, manager, id);
+        String key = WidgetStore.keyFromClassName(cn.getClassName());
+        for (int id : ids) render(context, manager, id, key);
         manager.notifyAppWidgetViewDataChanged(ids, WidgetStore.res(context, "id", "hsw_list"));
     }
 
-    private static void render(Context c, AppWidgetManager manager, int widgetId) {
-        JSONObject d = WidgetStore.load(c);
+    static int placedCount(Context context, String key) {
+        int n = 0;
+        AppWidgetManager manager = AppWidgetManager.getInstance(context);
+        for (ComponentName cn : providers(context)) {
+            if (key == null || cn.getClassName().equals(WidgetStore.providerClassName(key))) {
+                int[] ids = manager.getAppWidgetIds(cn);
+                n += ids == null ? 0 : ids.length;
+            }
+        }
+        return n;
+    }
+
+    private static void render(Context c, AppWidgetManager manager, int widgetId, String key) {
+        JSONObject d = WidgetStore.load(c, key);
         RemoteViews v = new RemoteViews(c.getPackageName(), WidgetStore.res(c, "layout", "hsw_widget"));
         int accent = WidgetStore.accent(d);
 
@@ -102,15 +127,17 @@ public class GenericWidgetProvider extends AppWidgetProvider {
 
         Intent svc = new Intent(c, WidgetListService.class);
         svc.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
+        svc.putExtra(WidgetStore.EXTRA_KEY, key);
         svc.setData(Uri.parse(svc.toUri(Intent.URI_INTENT_SCHEME)));
         v.setRemoteAdapter(id(c, "hsw_list"), svc);
         v.setEmptyView(id(c, "hsw_list"), id(c, "hsw_empty"));
 
-        // Header / empty area / footer: open the app (event ActionType "openApp", RowId "")
+        // Header / empty area / footer: open the app
         JSONObject open = new JSONObject();
         try {
             open.put("ActionType", "openApp");
             open.put("ActionName", "Open");
+            open.put("WidgetKey", key);
             open.put("DeepLink", d.optString("DeepLink", ""));
         } catch (Exception ignored) { }
         PendingIntent openPi = actionIntent(c, widgetId * 10 + 1, open.toString(), false);
