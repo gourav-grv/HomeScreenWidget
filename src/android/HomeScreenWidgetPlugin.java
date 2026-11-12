@@ -73,6 +73,7 @@ public class HomeScreenWidgetPlugin extends CordovaPlugin {
             case "clear":
             case "isSupported":
             case "requestPin":
+            case "isPlaced":
             case "setHeaders":
             case "refresh":
                 cordova.getThreadPool().execute(() -> run(action, args, cb));
@@ -107,8 +108,11 @@ public class HomeScreenWidgetPlugin extends CordovaPlugin {
                     break;
                 }
                 case "refresh": {
-                    String url = WidgetStore.load(c).optString("RefreshUrl", "");
-                    if (!url.isEmpty()) WidgetHttp.requestAndStore(c, url, "GET", null);
+                    // Every size that has its own data with a RefreshUrl
+                    for (String size : WidgetStore.SIZES) {
+                        String url = WidgetStore.loadOwn(c, size).optString("RefreshUrl", "");
+                        if (!url.isEmpty()) WidgetHttp.requestAndStore(c, url, "GET", null, size);
+                    }
                     GenericWidgetProvider.refreshAll(c);
                     cb.success();
                     break;
@@ -117,14 +121,22 @@ public class HomeScreenWidgetPlugin extends CordovaPlugin {
                     cb.sendPluginResult(new PluginResult(PluginResult.Status.OK, true));
                     break;
                 case "requestPin": {
+                    // args[0] = size ("small" | "medium" | "large"); empty = medium
                     boolean ok = false;
                     if (Build.VERSION.SDK_INT >= 26) {
                         AppWidgetManager m = AppWidgetManager.getInstance(c);
                         if (m.isRequestPinAppWidgetSupported()) {
-                            ok = m.requestPinAppWidget(new ComponentName(c, GenericWidgetProvider.class), null, null);
+                            Class<?> provider = WidgetStore.providerFor(args.optString(0, ""));
+                            ok = m.requestPinAppWidget(new ComponentName(c, provider), null, null);
                         }
                     }
                     cb.sendPluginResult(new PluginResult(PluginResult.Status.OK, ok));
+                    break;
+                }
+                case "isPlaced": {
+                    // True when a widget of this size is on the home screen
+                    boolean placed = GenericWidgetProvider.widgetIds(c, args.optString(0, "")).length > 0;
+                    cb.sendPluginResult(new PluginResult(PluginResult.Status.OK, placed));
                     break;
                 }
                 default:

@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="hsw_widget_description">Quick view of your app on the home screen</string>
+    <string name="hsw_widget_description">Medium widget (4x2)</string>
+    <string name="hsw_widget_description_small">Small widget (2x2)</string>
+    <string name="hsw_widget_description_large">Large widget (4x4)</string>
+    <string name="hsw_label_small">Small</string>
+    <string name="hsw_label_large">Large</string>
     <string name="hsw_empty_default">Nothing to show. Open the app to sync.</string>
 </resources>

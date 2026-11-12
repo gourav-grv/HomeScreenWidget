@@ -9,7 +9,8 @@ The app sends JSON (header + rows + buttons) and the widget renders it natively.
 | `update(data)` | Saves the widget data and refreshes the widget |
 | `clear()` | Removes the data |
 | `isSupported()` | Resolves `true` when the widget can be shown |
-| `requestPin()` | Android 8+: asks the launcher to add the widget |
+| `requestPin(size)` | Android 8+: asks the launcher to add the widget of this size (`small`, `medium`, `large`; default `medium`) |
+| `isPlaced(size)` | Resolves `true` when a widget of this size is on the home screen |
 | `setHeaders(obj)` | Headers for `http` actions and `RefreshUrl`, e.g. `{ "Authorization": "Bearer …" }` |
 | `refresh()` | Fetches `RefreshUrl` now |
 | `onAction(cb)` | Listener for `clientAction` / `openApp` taps. Returns an unsubscribe function. Taps made while the app was closed are delivered when the first listener registers. |
@@ -46,6 +47,15 @@ Tapping a row sends `{ ActionType: "openApp", ActionName: "RowTap", RowId }`.
 - The App Group defaults to `group.<bundle id>`. Override it with the config.xml preference `HSWAppGroup`.
 - The widget extension (`<bundle id>.HomeWidget`, iOS 15+) is added by `hooks/ios/add_widget_extension.js`. It needs its own provisioning profile with the same App Group (optional preference `HSWWidgetProfile`).
 - Widget taps reach the app through the URL scheme `hsw-<app id>`.
+
+## Widget sizes (2.4.0)
+The widget picker has three entries: **Small** (2x2), **Medium** (4x2, the original widget) and **Large** (4x4).
+On iOS these are the small, medium and large families of the same widget.
+
+Add `"Size": "small" | "medium" | "large"` to the widget data to choose which size shows it. Each size keeps its
+own data, so an app can show a different design in every size. Data without `Size` goes to `medium`, and a size
+without its own data shows the `medium` data. Apps cannot resize a placed widget: use `requestPin(size)` (Android)
+to offer the right size, and `isPlaced(size)` to check whether it is already on the home screen.
 
 ## Custom UI with Nodes (2.2.0)
 Send `Nodes` in the widget data to design any layout. When `Nodes` is present it replaces the classic header + rows layout; `Rows` still works for apps that don't send `Nodes`.

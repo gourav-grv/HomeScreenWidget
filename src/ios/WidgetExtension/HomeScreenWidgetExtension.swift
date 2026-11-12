@@ -14,8 +14,24 @@ enum HSWShared {
         return (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
     }
 
-    /// Runs a request with the stored headers; stores the response when it is widget data.
-    static func request(url: String, method: String?, body: String?) async {
+    /// One data slot per widget size. WidgetData.Size picks it; no Size = "medium" (the original slot).
+    static func dataKey(for size: String) -> String {
+        let s = size.lowercased()
+        return (s == "small" || s == "large") ? "hsw_data_\(s)" : "hsw_data"
+    }
+
+    /// Size name of a widget family.
+    static func size(of family: WidgetFamily) -> String {
+        switch family {
+        case .systemSmall: return "small"
+        case .systemMedium: return "medium"
+        default: return "large"
+        }
+    }
+
+    /// Runs a request with the stored headers; stores the response when it is widget data
+    /// (in the slot of its Size, or of `size` when the response has none).
+    static func request(url: String, method: String?, body: String?, size: String = "medium") async {
         guard let u = URL(string: url) else { return }
         var req = URLRequest(url: u, timeoutInterval: 10)
         let hasBody = !(body ?? "").isEmpty
@@ -32,7 +48,8 @@ enum HSWShared {
               let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
               let text = String(data: data, encoding: .utf8),
               let obj = object(text), obj["Rows"] != nil || obj["Title"] != nil else { return }
-        defaults?.set(text, forKey: "hsw_data")
+        let own = obj["Size"] as? String ?? ""
+        defaults?.set(text, forKey: dataKey(for: own.isEmpty ? size : own))
     }
 }
 
@@ -69,10 +86,15 @@ struct HSWData {
     var accent = Color(red: 0x10 / 255, green: 0x68 / 255, blue: 0xEB / 255)
     var rows: [HSWRow] = []
     var nodes: [HSWNode] = []
+    var size = "medium"
 
-    static func load() -> HSWData {
+    /// Data of a widget size. A size without its own data shows the medium data.
+    static func load(size: String = "medium") -> HSWData {
         var d = HSWData()
-        guard let obj = HSWShared.object(HSWShared.defaults?.string(forKey: "hsw_data")) else { return d }
+        d.size = size
+        let defaults = HSWShared.defaults
+        let raw = defaults?.string(forKey: HSWShared.dataKey(for: size)) ?? defaults?.string(forKey: "hsw_data")
+        guard let obj = HSWShared.object(raw) else { return d }
         d.title = obj["Title"] as? String ?? ""
         d.subtitle = obj["Subtitle"] as? String ?? ""
         d.count = (obj["Count"] as? NSNumber)?.intValue ?? 0
@@ -151,20 +173,22 @@ struct HSWHttpIntent: AppIntent {
     @Parameter(title: "Url") var url: String
     @Parameter(title: "Method") var method: String
     @Parameter(title: "Body") var body: String
+    @Parameter(title: "Size") var size: String  // size of the tapped widget
 
     init() {}
 
-    init(url: String, method: String, body: String) {
+    init(url: String, method: String, body: String, size: String) {
         self.url = url
         self.method = method
         self.body = body
+        self.size = size
     }
 
     func perform() async throws -> some IntentResult {
-        await HSWShared.request(url: url, method: method, body: body)
-        let data = HSWData.load()
+        await HSWShared.request(url: url, method: method, body: body, size: size)
+        let data = HSWData.load(size: size)
         if !data.refreshUrl.isEmpty, data.refreshUrl != url {
-            await HSWShared.request(url: data.refreshUrl, method: "GET", body: nil)
+            await HSWShared.request(url: data.refreshUrl, method: "GET", body: nil, size: size)
         }
         return .result()
     }
@@ -191,15 +215,17 @@ struct HSWProvider: TimelineProvider {
 
     func getSnapshot(in context: Context, completion: @escaping (HSWEntry) -> Void) {
         if context.isPreview { return completion(placeholder(in: context)) }
-        completion(HSWEntry(date: Date(), data: HSWData.load(), images: [:]))
+        completion(HSWEntry(date: Date(), data: HSWData.load(size: HSWShared.size(of: context.family)), images: [:]))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<HSWEntry>) -> Void) {
+        // Each widget family (small / medium / large) shows the data sent for its size.
+        let size = HSWShared.size(of: context.family)
         Task {
-            var data = HSWData.load()
+            var data = HSWData.load(size: size)
             if !data.refreshUrl.isEmpty {
-                await HSWShared.request(url: data.refreshUrl, method: "GET", body: nil)
-                data = HSWData.load()
+                await HSWShared.request(url: data.refreshUrl, method: "GET", body: nil, size: size)
+                data = HSWData.load(size: size)
             }
             var images: [String: UIImage] = [:]
             let imageItems = data.rows.filter { $0.type == "image" }.map { ($0.id, $0.imageUrl) }
@@ -345,7 +371,8 @@ struct HSWView: View {
             if #available(iOSApplicationExtension 17.0, *) {
                 Button(intent: HSWHttpIntent(url: b.raw["Url"] as? String ?? "",
                                              method: b.raw["Method"] as? String ?? "",
-                                             body: b.raw["Body"] as? String ?? "")) { label }
+                                             body: b.raw["Body"] as? String ?? "",
+                                             size: d.size)) { label }
                     .buttonStyle(.plain)
             } else {
                 linkOrLabel(label, d.actionURL(d.buttonAction(row, b)))
@@ -677,7 +704,8 @@ struct HSWTreeView: View {
             if #available(iOSApplicationExtension 17.0, *) {
                 return AnyView(Button(intent: HSWHttpIntent(url: n.raw["Url"] as? String ?? "",
                                                             method: n.raw["Method"] as? String ?? "",
-                                                            body: n.raw["Body"] as? String ?? "")) { v }
+                                                            body: n.raw["Body"] as? String ?? "",
+                                                            size: data.size)) { v }
                     .buttonStyle(.plain))
             }
         }

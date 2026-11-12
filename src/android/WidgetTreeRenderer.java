@@ -416,6 +416,7 @@ final class WidgetTreeRenderer {
                 a.put("Body", n.optString("Body", ""));
                 String dl = n.optString("DeepLink", "");
                 a.put("DeepLink", dl.isEmpty() ? data.optString("DeepLink", "") : dl);
+                a.put("Size", WidgetStore.sizeOfWidget(c, widgetId)); // http responses go to this widget's size
             } catch (Exception ignored) { }
             Intent i = new Intent(c, WidgetActionActivity.class);
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_NO_ANIMATION);

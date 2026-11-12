@@ -13,10 +13,20 @@ import android.widget.RemoteViews;
 
 import org.json.JSONObject;
 
-/** Renders the stored JSON (header + rows) and runs http actions / RefreshUrl in the background. */
+/**
+ * Renders the stored JSON (custom Nodes, or header + rows) and runs http actions / RefreshUrl in the background.
+ * This class is the "medium" widget; SmallWidgetProvider and LargeWidgetProvider are the other sizes
+ * of the widget picker. Each size shows the data sent with its WidgetData.Size (see WidgetStore).
+ */
 public class GenericWidgetProvider extends AppWidgetProvider {
 
     static final String ACTION_HTTP = "io.homescreenwidget.plugin.ACTION_HTTP";
+
+    /** All widget picker entries (one per size). */
+    static final Class<?>[] PROVIDERS = {SmallWidgetProvider.class, GenericWidgetProvider.class, LargeWidgetProvider.class};
+
+    /** Size of the widgets of this provider: "small", "medium" or "large". */
+    String size() { return "medium"; }
 
     @Override
     public void onUpdate(Context context, AppWidgetManager manager, int[] ids) {
@@ -24,13 +34,14 @@ public class GenericWidgetProvider extends AppWidgetProvider {
         manager.notifyAppWidgetViewDataChanged(ids, WidgetStore.res(context, "id", "hsw_list"));
 
         // Periodic refresh: if the data has a RefreshUrl, fetch fresh data without opening the app.
-        final String refreshUrl = WidgetStore.load(context).optString("RefreshUrl", "");
+        final String size = size();
+        final String refreshUrl = WidgetStore.load(context, size).optString("RefreshUrl", "");
         if (!refreshUrl.isEmpty()) {
             final PendingResult pending = goAsync();
             final Context app = context.getApplicationContext();
             new Thread(() -> {
                 try {
-                    if (WidgetHttp.requestAndStore(app, refreshUrl, "GET", null)) refreshAll(app);
+                    if (WidgetHttp.requestAndStore(app, refreshUrl, "GET", null, size)) refreshAll(app);
                 } finally {
                     pending.finish();
                 }
@@ -47,12 +58,13 @@ public class GenericWidgetProvider extends AppWidgetProvider {
             new Thread(() -> {
                 try {
                     String url = a.optString("Url", "");
+                    String size = a.optString("Size", "");  // size of the tapped widget
                     if (!url.isEmpty()) {
-                        boolean changed = WidgetHttp.requestAndStore(app, url, a.optString("Method", ""), a.optString("Body", ""));
+                        boolean changed = WidgetHttp.requestAndStore(app, url, a.optString("Method", ""), a.optString("Body", ""), size);
                         // Response was not widget data: re-read from RefreshUrl if there is one.
                         if (!changed) {
-                            String refreshUrl = WidgetStore.load(app).optString("RefreshUrl", "");
-                            if (!refreshUrl.isEmpty()) WidgetHttp.requestAndStore(app, refreshUrl, "GET", null);
+                            String refreshUrl = WidgetStore.load(app, size).optString("RefreshUrl", "");
+                            if (!refreshUrl.isEmpty()) WidgetHttp.requestAndStore(app, refreshUrl, "GET", null, size);
                         }
                     }
                     refreshAll(app);
@@ -65,17 +77,25 @@ public class GenericWidgetProvider extends AppWidgetProvider {
         super.onReceive(context, intent);
     }
 
-    /** Re-renders every placed widget of this app. */
+    /** Placed widgets of one size. */
+    static int[] widgetIds(Context context, String size) {
+        int[] ids = AppWidgetManager.getInstance(context).getAppWidgetIds(new ComponentName(context, WidgetStore.providerFor(size)));
+        return ids == null ? new int[0] : ids;
+    }
+
+    /** Re-renders every placed widget of this app (all sizes). */
     static void refreshAll(Context context) {
         AppWidgetManager manager = AppWidgetManager.getInstance(context);
-        int[] ids = manager.getAppWidgetIds(new ComponentName(context, GenericWidgetProvider.class));
-        if (ids == null || ids.length == 0) return;
-        for (int id : ids) render(context, manager, id);
-        manager.notifyAppWidgetViewDataChanged(ids, WidgetStore.res(context, "id", "hsw_list"));
+        for (Class<?> provider : PROVIDERS) {
+            int[] ids = manager.getAppWidgetIds(new ComponentName(context, provider));
+            if (ids == null || ids.length == 0) continue;
+            for (int id : ids) render(context, manager, id);
+            manager.notifyAppWidgetViewDataChanged(ids, WidgetStore.res(context, "id", "hsw_list"));
+        }
     }
 
     private static void render(Context c, AppWidgetManager manager, int widgetId) {
-        JSONObject d = WidgetStore.load(c);
+        JSONObject d = WidgetStore.load(c, WidgetStore.sizeOfWidget(c, widgetId));
         // Custom UI (WidgetData.Nodes) -> node renderer; otherwise the classic header + rows layout.
         if (WidgetTreeRenderer.hasTree(d)) {
             WidgetTreeRenderer.render(c, manager, widgetId, d);

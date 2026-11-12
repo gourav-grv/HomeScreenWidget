@@ -35,7 +35,10 @@ module.exports = {
     },
     clear: function () { return call('clear'); },
     isSupported: function () { return call('isSupported'); },
-    requestPin: function () { return call('requestPin'); },
+    /** Android 8+: asks the launcher to add the widget of this size ("small" | "medium" | "large"; default medium). */
+    requestPin: function (size) { return call('requestPin', [size || '']); },
+    /** Resolves true when a widget of this size is on the home screen (Android). */
+    isPlaced: function (size) { return call('isPlaced', [size || '']); },
     /** Headers sent with http actions and RefreshUrl, e.g. { "Authorization": "Bearer ..." }. */
     setHeaders: function (headers) {
         var json = typeof headers === 'string' ? headers : JSON.stringify(headers || {});

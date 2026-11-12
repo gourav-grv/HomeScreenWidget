@@ -26,7 +26,8 @@ public class WidgetListService extends RemoteViewsService {
 
     @Override
     public RemoteViewsFactory onGetViewFactory(Intent intent) {
-        return new Factory(getApplicationContext());
+        int widgetId = intent.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID, 0);
+        return new Factory(getApplicationContext(), widgetId);
     }
 
     static class Factory implements RemoteViewsFactory {
@@ -34,14 +35,20 @@ public class WidgetListService extends RemoteViewsService {
         private JSONArray rows = new JSONArray();
         private int accent = WidgetStore.DEFAULT_ACCENT;
         private String dataDeepLink = "";
+        private final int widgetId;
+        private String size = "medium";
 
-        Factory(Context context) { this.context = context; }
+        Factory(Context context, int widgetId) {
+            this.context = context;
+            this.widgetId = widgetId;
+        }
 
         @Override public void onCreate() { }
 
         @Override
         public void onDataSetChanged() {
-            JSONObject d = WidgetStore.load(context);
+            size = WidgetStore.sizeOfWidget(context, widgetId);
+            JSONObject d = WidgetStore.load(context, size);
             JSONArray a = d.optJSONArray("Rows");
             rows = a == null ? new JSONArray() : a;
             accent = WidgetStore.accent(d);
@@ -178,6 +185,7 @@ public class WidgetListService extends RemoteViewsService {
                 a.put("Body", b.optString("Body", ""));
                 String dl = row.optString("DeepLink", "");
                 a.put("DeepLink", dl.isEmpty() ? dataDeepLink : dl);
+                a.put("Size", size); // http responses go to this widget's size
             } catch (Exception ignored) { }
             return a;
         }

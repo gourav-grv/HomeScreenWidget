@@ -1,5 +1,7 @@
 package io.homescreenwidget.plugin;
 
+import android.appwidget.AppWidgetManager;
+import android.appwidget.AppWidgetProviderInfo;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Color;
@@ -23,13 +25,64 @@ final class WidgetStore {
         return c.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 
-    // ---- widget data
-    static void save(Context c, String json) { prefs(c).edit().putString(KEY_DATA, json).apply(); }
+    // ---- widget data: one slot per widget size.
+    // WidgetData.Size ("small" | "medium" | "large") picks the slot. Data without a Size goes to
+    // "medium", the original widget, so apps written before sizes existed keep working.
+    static final String[] SIZES = {"small", "medium", "large"};
 
-    static void clear(Context c) { prefs(c).edit().remove(KEY_DATA).apply(); }
+    /** Normalizes a size name; anything unknown is "medium". */
+    static String size(String s) {
+        s = s == null ? "" : s.trim().toLowerCase();
+        return s.equals("small") || s.equals("large") ? s : "medium";
+    }
 
-    static JSONObject load(Context c) {
-        return parse(prefs(c).getString(KEY_DATA, null));
+    private static String key(String size) {
+        size = size(size);
+        return size.equals("medium") ? KEY_DATA : KEY_DATA + "_" + size;
+    }
+
+    static void save(Context c, String json) { save(c, json, "medium"); }
+
+    /** Stores widget data in the slot named by its Size, or in defaultSize when it has none. */
+    static void save(Context c, String json, String defaultSize) {
+        String s = parse(json).optString("Size", "");
+        prefs(c).edit().putString(key(s.isEmpty() ? defaultSize : s), json).apply();
+    }
+
+    static void clear(Context c) {
+        SharedPreferences.Editor e = prefs(c).edit();
+        for (String s : SIZES) e.remove(key(s));
+        e.apply();
+    }
+
+    static JSONObject load(Context c) { return load(c, "medium"); }
+
+    /** Data shown by a widget of this size. A size without its own data shows the medium data. */
+    static JSONObject load(Context c, String size) {
+        String raw = prefs(c).getString(key(size), null);
+        if (raw == null || raw.isEmpty()) raw = prefs(c).getString(KEY_DATA, null);
+        return parse(raw);
+    }
+
+    /** Only the data stored for this size (no fallback), e.g. to read its own RefreshUrl. */
+    static JSONObject loadOwn(Context c, String size) { return parse(prefs(c).getString(key(size), null)); }
+
+    /** Size of a placed widget, from the provider class it belongs to. */
+    static String sizeOfWidget(Context c, int widgetId) {
+        AppWidgetProviderInfo info = AppWidgetManager.getInstance(c).getAppWidgetInfo(widgetId);
+        String cls = info == null || info.provider == null ? "" : info.provider.getClassName();
+        if (cls.endsWith(".SmallWidgetProvider")) return "small";
+        if (cls.endsWith(".LargeWidgetProvider")) return "large";
+        return "medium";
+    }
+
+    /** Provider class (widget picker entry) of a size. */
+    static Class<?> providerFor(String size) {
+        switch (size(size)) {
+            case "small": return SmallWidgetProvider.class;
+            case "large": return LargeWidgetProvider.class;
+            default: return GenericWidgetProvider.class;
+        }
     }
 
     static JSONArray rows(Context c) {

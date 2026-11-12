@@ -10,6 +10,13 @@ class HomeScreenWidgetPlugin: CDVPlugin {
     static let dataKey = "hsw_data"
     static let headersKey = "hsw_headers"
     static let pendingKey = "hsw_pending"
+    static let sizes = ["small", "medium", "large"]
+
+    /// One data slot per widget size. WidgetData.Size picks it; no Size = "medium" (the original slot).
+    static func dataKey(for size: String) -> String {
+        let s = size.lowercased()
+        return (s == "small" || s == "large") ? "\(dataKey)_\(s)" : dataKey
+    }
 
     private var listenerId: String?
 
@@ -29,15 +36,15 @@ class HomeScreenWidgetPlugin: CDVPlugin {
     func update(_ command: CDVInvokedUrlCommand) {
         guard let defaults = shared else { return fail(command, "App Group is not configured.") }
         let json = (command.argument(at: 0) as? String) ?? "{}"
-        guard isJSONObject(json) else { return fail(command, "Payload is not valid JSON.") }
-        defaults.set(json, forKey: Self.dataKey)
+        guard let obj = parseObject(json) else { return fail(command, "Payload is not valid JSON.") }
+        defaults.set(json, forKey: Self.dataKey(for: obj["Size"] as? String ?? ""))
         reloadWidgets()
         ok(command)
     }
 
     @objc(clear:)
     func clear(_ command: CDVInvokedUrlCommand) {
-        shared?.removeObject(forKey: Self.dataKey)
+        for size in Self.sizes { shared?.removeObject(forKey: Self.dataKey(for: size)) }
         reloadWidgets()
         ok(command)
     }
@@ -76,6 +83,28 @@ class HomeScreenWidgetPlugin: CDVPlugin {
     @objc(requestPin:)
     func requestPin(_ command: CDVInvokedUrlCommand) {
         send(command, CDVPluginResult(status: CDVCommandStatus_OK, messageAs: false))
+    }
+
+    /// True when a widget of this size ("small" | "medium" | "large") is on the home screen.
+    @objc(isPlaced:)
+    func isPlaced(_ command: CDVInvokedUrlCommand) {
+        let size = ((command.argument(at: 0) as? String) ?? "").lowercased()
+        guard #available(iOS 14.0, *) else {
+            return send(command, CDVPluginResult(status: CDVCommandStatus_OK, messageAs: false))
+        }
+        WidgetCenter.shared.getCurrentConfigurations { [weak self] result in
+            let families = (try? result.get())?.map { $0.family } ?? []
+            let placed = families.contains { family in
+                switch family {
+                case .systemSmall: return size == "small"
+                case .systemLarge: return size == "large"
+                default: return size != "small" && size != "large"
+                }
+            }
+            DispatchQueue.main.async {
+                self?.send(command, CDVPluginResult(status: CDVCommandStatus_OK, messageAs: placed))
+            }
+        }
     }
 
     /// Keeps the callback open; every widget action is sent to it. Pending actions are flushed first.
@@ -156,7 +185,7 @@ class HomeScreenWidgetPlugin: CDVPlugin {
                let data = data,
                let text = String(data: data, encoding: .utf8),
                let obj = self.parseObject(text), obj["Rows"] != nil || obj["Title"] != nil {
-                self.shared?.set(text, forKey: Self.dataKey)
+                self.shared?.set(text, forKey: Self.dataKey(for: obj["Size"] as? String ?? ""))
             }
             DispatchQueue.main.async { done() }
         }.resume()

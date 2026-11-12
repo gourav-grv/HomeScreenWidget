@@ -55,13 +55,16 @@ final class WidgetHttp {
         }
     }
 
-    /** Runs a request and, if the response is widget data, stores it. Returns true when data changed. */
-    static boolean requestAndStore(Context c, String url, String method, String body) {
+    /**
+     * Runs a request and, if the response is widget data, stores it (in the slot of its Size, or of
+     * defaultSize when the response has none). Returns true when data changed.
+     */
+    static boolean requestAndStore(Context c, String url, String method, String body, String defaultSize) {
         String resp = request(c, url, method, body);
         if (resp == null) return false;
         JSONObject o = WidgetStore.parse(resp.trim());
         if (WidgetStore.isWidgetData(o)) {
-            WidgetStore.save(c, o.toString());
+            WidgetStore.save(c, o.toString(), defaultSize);
             return true;
         }
         return false;
