@@ -2,7 +2,7 @@
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
         xmlns:android="http://schemas.android.com/apk/res/android"
         id="cordova-plugin-homescreen-widget"
-        version="2.2.0">
+        version="2.2.1">
 
     <name>HomeScreenWidget</name>
     <description>Dynamic home screen widget (Android App Widget + iOS WidgetKit). The app pushes JSON (header + rows + buttons); buttons can call an HTTP endpoint, a client action in the app, or open the app.</description>
@@ -71,6 +71,9 @@
         <resource-file src="res/android/layout/hswt_ring.xml" target="res/layout/hswt_ring.xml" />
         <resource-file src="res/android/layout/hswt_root.xml" target="res/layout/hswt_root.xml" />
         <resource-file src="res/android/layout/hswt_row.xml" target="res/layout/hswt_row.xml" />
+        <resource-file src="res/android/layout/hswt_column_fill.xml" target="res/layout/hswt_column_fill.xml" />
+        <resource-file src="res/android/layout/hswt_row_fill.xml" target="res/layout/hswt_row_fill.xml" />
+        <resource-file src="res/android/layout/hswt_stack_fill.xml" target="res/layout/hswt_stack_fill.xml" />
         <resource-file src="res/android/layout/hswt_slot.xml" target="res/layout/hswt_slot.xml" />
         <resource-file src="res/android/layout/hswt_slot_fill_w.xml" target="res/layout/hswt_slot_fill_w.xml" />
         <resource-file src="res/android/layout/hswt_slot_flex_h.xml" target="res/layout/hswt_slot_flex_h.xml" />

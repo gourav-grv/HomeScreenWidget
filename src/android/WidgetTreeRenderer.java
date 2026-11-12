@@ -142,7 +142,7 @@ final class WidgetTreeRenderer {
                 case "row":
                 case "column":
                 case "stack":
-                    v = container(n, type, color);
+                    v = container(n, type, color, isTop);
                     rootId = id("hswt_c");
                     if (!isTop) applyBackground(v, rootId, n.optString("Background", ""));
                     applyPadding(v, rootId, n, isTop ? 0 : -1);
@@ -210,8 +210,10 @@ final class WidgetTreeRenderer {
             return v;
         }
 
-        RemoteViews container(JSONObject n, String type, int color) {
-            RemoteViews v = new RemoteViews(pkg, layout("hswt_" + type));
+        RemoteViews container(JSONObject n, String type, int color, boolean isTop) {
+            // The top container fills the whole widget so children with Weight can share the height
+            // (e.g. a list that shrinks while a footer stays visible).
+            RemoteViews v = new RemoteViews(pkg, layout("hswt_" + type + (isTop ? "_fill" : "")));
             int cid = id("hswt_c");
             int defaultGravity = type.equals("row") ? (Gravity.START | Gravity.CENTER_VERTICAL) : Gravity.START | Gravity.TOP;
             if (!type.equals("stack")) v.setInt(cid, "setGravity", gravity(n.optString("Align", ""), defaultGravity));
