@@ -2,7 +2,7 @@
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
         xmlns:android="http://schemas.android.com/apk/res/android"
         id="cordova-plugin-homescreen-widget"
-        version="2.0.1">
+        version="2.2.0">
 
     <name>HomeScreenWidget</name>
     <description>Dynamic home screen widget (Android App Widget + iOS WidgetKit). The app pushes JSON (header + rows + buttons); buttons can call an HTTP endpoint, a client action in the app, or open the app.</description>
@@ -59,6 +59,36 @@
         <source-file src="src/android/WidgetStore.java" target-dir="src/io/homescreenwidget/plugin" />
         <source-file src="src/android/WidgetHttp.java" target-dir="src/io/homescreenwidget/plugin" />
         <source-file src="src/android/WidgetActionActivity.java" target-dir="src/io/homescreenwidget/plugin" />
+        <source-file src="src/android/WidgetBitmaps.java" target-dir="src/io/homescreenwidget/plugin" />
+        <source-file src="src/android/WidgetTreeRenderer.java" target-dir="src/io/homescreenwidget/plugin" />
+        <resource-file src="res/android/layout/hswt_bar.xml" target="res/layout/hswt_bar.xml" />
+        <resource-file src="res/android/layout/hswt_button.xml" target="res/layout/hswt_button.xml" />
+        <resource-file src="res/android/layout/hswt_check.xml" target="res/layout/hswt_check.xml" />
+        <resource-file src="res/android/layout/hswt_clock.xml" target="res/layout/hswt_clock.xml" />
+        <resource-file src="res/android/layout/hswt_clock_bold.xml" target="res/layout/hswt_clock_bold.xml" />
+        <resource-file src="res/android/layout/hswt_column.xml" target="res/layout/hswt_column.xml" />
+        <resource-file src="res/android/layout/hswt_image.xml" target="res/layout/hswt_image.xml" />
+        <resource-file src="res/android/layout/hswt_ring.xml" target="res/layout/hswt_ring.xml" />
+        <resource-file src="res/android/layout/hswt_root.xml" target="res/layout/hswt_root.xml" />
+        <resource-file src="res/android/layout/hswt_row.xml" target="res/layout/hswt_row.xml" />
+        <resource-file src="res/android/layout/hswt_slot.xml" target="res/layout/hswt_slot.xml" />
+        <resource-file src="res/android/layout/hswt_slot_fill_w.xml" target="res/layout/hswt_slot_fill_w.xml" />
+        <resource-file src="res/android/layout/hswt_slot_flex_h.xml" target="res/layout/hswt_slot_flex_h.xml" />
+        <resource-file src="res/android/layout/hswt_slot_flex_v.xml" target="res/layout/hswt_slot_flex_v.xml" />
+        <resource-file src="res/android/layout/hswt_slot_stack.xml" target="res/layout/hswt_slot_stack.xml" />
+        <resource-file src="res/android/layout/hswt_spacer.xml" target="res/layout/hswt_spacer.xml" />
+        <resource-file src="res/android/layout/hswt_stack.xml" target="res/layout/hswt_stack.xml" />
+        <resource-file src="res/android/layout/hswt_text.xml" target="res/layout/hswt_text.xml" />
+        <resource-file src="res/android/layout/hswt_text_bold.xml" target="res/layout/hswt_text_bold.xml" />
+        <resource-file src="res/android/drawable/hswt_bg_accent.xml" target="res/drawable/hswt_bg_accent.xml" />
+        <resource-file src="res/android/drawable/hswt_bg_card.xml" target="res/drawable/hswt_bg_card.xml" />
+        <resource-file src="res/android/drawable/hswt_bg_chip.xml" target="res/drawable/hswt_bg_chip.xml" />
+        <resource-file src="res/android/drawable/hswt_bg_circle.xml" target="res/drawable/hswt_bg_circle.xml" />
+        <resource-file src="res/android/drawable/hswt_bg_circleaccent.xml" target="res/drawable/hswt_bg_circleaccent.xml" />
+        <resource-file src="res/android/drawable/hswt_bg_dark.xml" target="res/drawable/hswt_bg_dark.xml" />
+        <resource-file src="res/android/drawable/hswt_bg_glass.xml" target="res/drawable/hswt_bg_glass.xml" />
+        <resource-file src="res/android/drawable/hswt_bg_light.xml" target="res/drawable/hswt_bg_light.xml" />
+        <resource-file src="res/android/drawable/hswt_bg_tint.xml" target="res/drawable/hswt_bg_tint.xml" />
 
         <resource-file src="res/android/layout/hsw_widget.xml" target="res/layout/hsw_widget.xml" />
         <resource-file src="res/android/layout/hsw_row_item.xml" target="res/layout/hsw_row_item.xml" />

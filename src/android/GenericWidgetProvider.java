@@ -76,6 +76,11 @@ public class GenericWidgetProvider extends AppWidgetProvider {
 
     private static void render(Context c, AppWidgetManager manager, int widgetId) {
         JSONObject d = WidgetStore.load(c);
+        // Custom UI (WidgetData.Nodes) -> node renderer; otherwise the classic header + rows layout.
+        if (WidgetTreeRenderer.hasTree(d)) {
+            WidgetTreeRenderer.render(c, manager, widgetId, d);
+            return;
+        }
         RemoteViews v = new RemoteViews(c.getPackageName(), WidgetStore.res(c, "layout", "hsw_widget"));
         int accent = WidgetStore.accent(d);
 

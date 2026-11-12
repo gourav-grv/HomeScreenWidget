@@ -56,3 +56,24 @@ Focus Timer, Weather + Clock, Today Dashboard, Game Mode.
 - They are separate from the data-driven widget (`GenericWidgetProvider`) and never read or change its data.
 - Each one appears in the picker as "<Name> (Demo)". Tapping it opens the app.
 - Files: `src/android/demo/`, `res/android/*/hswd_*`. To remove them, delete the `HSW-DEMOS` block in `plugin.xml`.
+
+## Custom UI with Nodes (2.2.0)
+Send `Nodes` in the widget data to design any layout. When `Nodes` is present it replaces the classic header + rows layout; `Rows` still works for apps that don't send `Nodes`.
+
+Each node: `Id`, `ParentId` (empty = top), `Type`, plus the properties it needs.
+
+| Type | Use | Main properties |
+|---|---|---|
+| `row` / `column` / `stack` | layout containers | `Background`, `Padding`, `Gap`, `Align`, `Color` (default text colour for children) |
+| `text` / `icon` | text, emoji icon | `Text`, `FontSize`, `Bold`, `Color`, `Align`, `Background`, `Padding` |
+| `image` | picture from a URL | `ImageUrl`, `Width`, `Height` |
+| `ring` / `bar` | circular / linear progress | `Value`, `Max`, `Color`, `Width` (ring size), `Height` (bar), `Text` (ring label) |
+| `button` | button | `Text`, `Background`, `Color` + action |
+| `checkbox` / `toggle` | check mark / switch | `Checked`, `Text`, `Background` (accent) + action |
+| `clock` | live time/date | `Text` = format (`HH:mm`, `EEE, d MMM`), `FontSize`, `Bold` |
+| `spacer` / `divider` | space / line | `Width`, `Height` (spacer without size fills the free space) |
+
+- `Weight` > 0 makes a child take the free space of its row/column.
+- `Background`: `#RRGGBB`, a gradient `#A,#B` (widget background), or a token: `card`, `light`, `dark`, `glass`, `chip`, `accent`, `circle`.
+- Any node can have an action (`ActionType`, `ActionName`, `Payload`, `Url`, `Method`, `Body`, `DeepLink`).
+- Android draws rings, bars, toggles and gradients as bitmaps. A widget holds up to 80 nodes.

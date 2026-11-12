@@ -68,6 +68,7 @@ struct HSWData {
     var refreshUrl = ""
     var accent = Color(red: 0x10 / 255, green: 0x68 / 255, blue: 0xEB / 255)
     var rows: [HSWRow] = []
+    var nodes: [HSWNode] = []
 
     static func load() -> HSWData {
         var d = HSWData()
@@ -99,6 +100,7 @@ struct HSWData {
                           deepLink: r["DeepLink"] as? String ?? "",
                           buttons: Array(buttons))
         }
+        d.nodes = (obj["Nodes"] as? [[String: Any]] ?? []).prefix(80).enumerated().map { HSWNode(raw: $1, index: $0) }
         return d
     }
 
@@ -200,11 +202,13 @@ struct HSWProvider: TimelineProvider {
                 data = HSWData.load()
             }
             var images: [String: UIImage] = [:]
-            for row in data.rows where row.type == "image" && !row.imageUrl.isEmpty {
-                if let u = URL(string: row.imageUrl),
+            let imageItems = data.rows.filter { $0.type == "image" }.map { ($0.id, $0.imageUrl) }
+                + data.nodes.filter { $0.type == "image" }.map { ($0.id, $0.imageUrl) }
+            for (imageId, imageUrl) in imageItems where !imageUrl.isEmpty {
+                if let u = URL(string: imageUrl),
                    let (bytes, _) = try? await URLSession.shared.data(from: u),
                    let img = UIImage(data: bytes) {
-                    images[row.id] = img.preparingThumbnail(of: CGSize(width: 600, height: 600 * img.size.height / max(img.size.width, 1))) ?? img
+                    images[imageId] = img.preparingThumbnail(of: CGSize(width: 600, height: 600 * img.size.height / max(img.size.width, 1))) ?? img
                 }
             }
             let next = Calendar.current.date(byAdding: .minute, value: 30, to: Date()) ?? Date()
@@ -228,8 +232,16 @@ struct HSWView: View {
     }
 
     var body: some View {
+        if entry.data.nodes.isEmpty {
+            classicBody
+        } else {
+            HSWTreeView(data: entry.data, images: entry.images)
+        }
+    }
+
+    private var classicBody: some View {
         let d = entry.data
-        VStack(alignment: .leading, spacing: 6) {
+        return VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .center, spacing: 8) {
                 RoundedRectangle(cornerRadius: 2).fill(d.accent).frame(width: 4, height: 30)
                 VStack(alignment: .leading, spacing: 1) {
@@ -354,11 +366,20 @@ struct HSWView: View {
 }
 
 struct HSWBackground: ViewModifier {
+    var data: HSWData? = nil
+
+    private var fill: AnyView {
+        if let d = data, let root = HSWTree(nodes: d.nodes).root {
+            return HSWStyle.background(root.background.isEmpty ? "#FFFFFF" : root.background, radius: 0)
+        }
+        return AnyView(Color(UIColor.systemBackground))
+    }
+
     func body(content: Content) -> some View {
         if #available(iOSApplicationExtension 17.0, *) {
-            content.containerBackground(for: .widget) { Color(UIColor.systemBackground) }
+            content.containerBackground(for: .widget) { fill }
         } else {
-            content.padding().background(Color(UIColor.systemBackground))
+            content.padding().background(fill)
         }
     }
 }
@@ -369,10 +390,299 @@ struct HomeScreenWidget: Widget {
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: HSWProvider()) { entry in
-            HSWView(entry: entry).modifier(HSWBackground())
+            HSWView(entry: entry).modifier(HSWBackground(data: entry.data))
         }
         .configurationDisplayName(Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "Widget")
         .description("Quick view of your app on the home screen")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+    }
+}
+
+
+// MARK: - Custom UI (WidgetData.Nodes)
+
+struct HSWNode: Identifiable {
+    let id: String
+    let parentId: String
+    let type: String
+    let text: String
+    let value: Double
+    let max: Double
+    let imageUrl: String
+    let color: String
+    let background: String
+    let fontSize: Double
+    let bold: Bool
+    let align: String
+    let weight: Double
+    let padding: Double
+    let gap: Double
+    let width: Double
+    let height: Double
+    let checked: Bool
+    let raw: [String: Any]
+
+    init(raw r: [String: Any], index: Int) {
+        func s(_ k: String) -> String { r[k] as? String ?? "" }
+        func n(_ k: String) -> Double { (r[k] as? NSNumber)?.doubleValue ?? 0 }
+        let rawId = s("Id")
+        id = rawId.isEmpty ? "n\(index)" : rawId
+        parentId = s("ParentId")
+        type = s("Type").lowercased()
+        text = s("Text")
+        value = n("Value")
+        max = n("Max")
+        imageUrl = s("ImageUrl")
+        color = s("Color")
+        background = s("Background")
+        fontSize = n("FontSize")
+        bold = r["Bold"] as? Bool ?? false
+        align = s("Align").lowercased()
+        weight = n("Weight")
+        padding = n("Padding")
+        gap = n("Gap")
+        width = n("Width")
+        height = n("Height")
+        checked = r["Checked"] as? Bool ?? false
+        raw = r
+    }
+
+    var hasAction: Bool { !((raw["ActionType"] as? String) ?? "").isEmpty }
+
+    var fraction: Double {
+        let m = max > 0 ? max : 100
+        return Swift.max(0, Swift.min(1, value / m))
+    }
+}
+
+struct HSWTree {
+    let byParent: [String: [HSWNode]]
+    let root: HSWNode?
+
+    init(nodes: [HSWNode]) {
+        let ids = Set(nodes.map { $0.id })
+        var map: [String: [HSWNode]] = [:]
+        var roots: [HSWNode] = []
+        for n in nodes {
+            if n.parentId.isEmpty || !ids.contains(n.parentId) || n.parentId == n.id {
+                roots.append(n)
+            } else {
+                map[n.parentId, default: []].append(n)
+            }
+        }
+        if roots.count == 1 {
+            root = roots[0]
+        } else if roots.isEmpty {
+            root = nil
+        } else {
+            let wrapper = HSWNode(raw: ["Id": "__root", "Type": "column"], index: -1)
+            map["__root"] = roots
+            root = wrapper
+        }
+        byParent = map
+    }
+
+    func children(_ n: HSWNode) -> [HSWNode] { byParent[n.id] ?? [] }
+}
+
+enum HSWStyle {
+    static func color(_ s: String, _ fallback: Color) -> Color {
+        let parts = s.split(separator: ",").map { String($0) }
+        guard let first = parts.first, let c = Color(hex: first) else { return fallback }
+        return c
+    }
+
+    static func background(_ spec: String, radius: CGFloat) -> AnyView {
+        let s = spec.trimmingCharacters(in: .whitespaces)
+        if s.isEmpty { return AnyView(Color.clear) }
+        if s.hasPrefix("#") {
+            let colors = s.split(separator: ",").compactMap { Color(hex: String($0)) }
+            if colors.count > 1 {
+                return AnyView(RoundedRectangle(cornerRadius: radius)
+                    .fill(LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)))
+            }
+            return AnyView(RoundedRectangle(cornerRadius: radius).fill(colors.first ?? .clear))
+        }
+        switch s.lowercased() {
+        case "card": return AnyView(RoundedRectangle(cornerRadius: radius).fill(Color.white))
+        case "light": return AnyView(RoundedRectangle(cornerRadius: radius).fill(Color(white: 0.95)))
+        case "dark": return AnyView(RoundedRectangle(cornerRadius: radius).fill(Color(red: 0.12, green: 0.16, blue: 0.22)))
+        case "glass", "chip": return AnyView(RoundedRectangle(cornerRadius: radius).fill(Color.white.opacity(0.18)))
+        case "accent": return AnyView(RoundedRectangle(cornerRadius: radius).fill(Color(red: 0.39, green: 0.40, blue: 0.95)))
+        case "circle": return AnyView(Circle().fill(Color.white))
+        case "circleaccent": return AnyView(Circle().fill(Color(red: 0.39, green: 0.40, blue: 0.95)))
+        default: return AnyView(Color.clear)
+        }
+    }
+
+    static func hAlign(_ a: String) -> HorizontalAlignment {
+        switch a { case "center": return .center; case "end", "right": return .trailing; default: return .leading }
+    }
+
+    static func vAlign(_ a: String) -> VerticalAlignment {
+        switch a { case "top": return .top; case "bottom": return .bottom; default: return .center }
+    }
+
+    static func frameAlign(_ a: String) -> Alignment {
+        switch a {
+        case "center": return .center
+        case "end", "right": return .trailing
+        case "top": return .top
+        case "bottom": return .bottom
+        case "start", "left": return .leading
+        default: return .center
+        }
+    }
+}
+
+struct HSWTreeView: View {
+    let data: HSWData
+    let images: [String: UIImage]
+
+    var body: some View {
+        let tree = HSWTree(nodes: data.nodes)
+        if let root = tree.root {
+            render(root, tree, inherited: Color(hex: "#111827") ?? .primary, isTop: true)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        } else {
+            Color.clear
+        }
+    }
+
+    private func render(_ n: HSWNode, _ tree: HSWTree, inherited: Color, isTop: Bool = false) -> AnyView {
+        let color = HSWStyle.color(n.color, inherited)
+        var view: AnyView
+        switch n.type {
+        case "row":
+            view = AnyView(HStack(alignment: HSWStyle.vAlign(n.align), spacing: CGFloat(n.gap)) {
+                ForEach(tree.children(n)) { c in weighted(render(c, tree, inherited: color), c, horizontal: true) }
+            })
+        case "column":
+            view = AnyView(VStack(alignment: HSWStyle.hAlign(n.align), spacing: CGFloat(n.gap)) {
+                ForEach(tree.children(n)) { c in weighted(render(c, tree, inherited: color), c, horizontal: false) }
+            })
+        case "stack":
+            view = AnyView(ZStack {
+                ForEach(tree.children(n)) { c in
+                    render(c, tree, inherited: color)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: HSWStyle.frameAlign(c.align))
+                }
+            })
+        case "image":
+            if let img = images[n.id] {
+                view = AnyView(Image(uiImage: img).resizable().scaledToFill()
+                    .frame(width: n.width > 0 ? CGFloat(n.width) : nil, height: n.height > 0 ? CGFloat(n.height) : 80)
+                    .clipped().cornerRadius(8))
+            } else {
+                view = AnyView(Color.clear.frame(width: n.width > 0 ? CGFloat(n.width) : 1, height: n.height > 0 ? CGFloat(n.height) : 1))
+            }
+        case "ring":
+            let size = CGFloat(n.width > 0 ? n.width : (n.height > 0 ? n.height : 64))
+            let ringColor = HSWStyle.color(n.color, Color(red: 0.39, green: 0.40, blue: 0.95))
+            view = AnyView(ZStack {
+                Circle().stroke(ringColor.opacity(0.2), lineWidth: max(4, size / 10))
+                Circle().trim(from: 0, to: CGFloat(n.fraction))
+                    .stroke(ringColor, style: StrokeStyle(lineWidth: max(4, size / 10), lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                Text(n.text).font(.system(size: CGFloat(n.fontSize > 0 ? n.fontSize : Double(max(10, size / 5))), weight: .bold))
+                    .foregroundColor(inherited).multilineTextAlignment(.center)
+            }.frame(width: size, height: size).padding(max(2, size / 20)))
+        case "bar", "divider":
+            let isDivider = n.type == "divider"
+            let h = CGFloat(n.height > 0 ? n.height : (isDivider ? 1 : 6))
+            let barColor = HSWStyle.color(n.color, isDivider ? Color(white: 0.9) : Color(red: 0.39, green: 0.40, blue: 0.95))
+            let track = isDivider ? barColor : HSWStyle.color(n.background, barColor.opacity(0.2))
+            let frac = isDivider ? 1.0 : n.fraction
+            view = AnyView(GeometryReader { g in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(track)
+                    Capsule().fill(barColor).frame(width: g.size.width * CGFloat(frac))
+                }
+            }.frame(height: h))
+        case "checkbox", "toggle":
+            let accent = HSWStyle.color(n.background, Color(red: 0.39, green: 0.40, blue: 0.95))
+            let symbol: String = n.type == "toggle" ? (n.checked ? "togglepower" : "power") : (n.checked ? "checkmark.square.fill" : "square")
+            view = AnyView(HStack(spacing: 8) {
+                if n.type == "toggle" {
+                    Capsule().fill(n.checked ? accent : Color.gray).frame(width: 40, height: 22)
+                        .overlay(Circle().fill(Color.white).padding(3), alignment: n.checked ? .trailing : .leading)
+                } else {
+                    Image(systemName: symbol).foregroundColor(accent)
+                        .font(.system(size: CGFloat(n.height > 0 ? n.height : 18)))
+                }
+                if !n.text.isEmpty {
+                    Text(n.text).font(.system(size: CGFloat(n.fontSize > 0 ? n.fontSize : 14)))
+                        .foregroundColor(n.checked && n.type == "checkbox" ? .secondary : color).lineLimit(1)
+                }
+            })
+        case "button":
+            view = AnyView(Text(n.text).font(.system(size: CGFloat(n.fontSize > 0 ? n.fontSize : 13), weight: .bold))
+                .foregroundColor(HSWStyle.color(n.color, .white)).lineLimit(1)
+                .padding(.horizontal, 12).padding(.vertical, 6)
+                .background(HSWStyle.background(n.background.isEmpty ? "accent" : n.background, radius: 12)))
+        case "clock":
+            let size = CGFloat(n.fontSize > 0 ? n.fontSize : 28)
+            let fmt = n.text.lowercased()
+            let isDate = fmt.contains("d") || fmt.contains("e") || fmt.contains("m") && !fmt.contains(":")
+            view = AnyView(Group {
+                if isDate {
+                    Text(Date(), style: .date)
+                } else {
+                    Text(Date(), style: .time)
+                }
+            }.font(.system(size: size, weight: n.bold ? .bold : .regular)).foregroundColor(color))
+        case "spacer":
+            if n.width > 0 || n.height > 0 {
+                view = AnyView(Color.clear.frame(width: n.width > 0 ? CGFloat(n.width) : nil, height: n.height > 0 ? CGFloat(n.height) : nil))
+            } else {
+                view = AnyView(Spacer(minLength: 0))
+            }
+        default: // text, icon
+            let size = CGFloat(n.fontSize > 0 ? n.fontSize : (n.type == "icon" ? 20 : 13))
+            view = AnyView(Text(n.text).font(.system(size: size, weight: n.bold ? .bold : .regular))
+                .foregroundColor(color).lineLimit(3)
+                .multilineTextAlignment(n.align == "center" ? .center : (n.align == "end" || n.align == "right" ? .trailing : .leading)))
+        }
+
+        if n.padding > 0 { view = AnyView(view.padding(CGFloat(n.padding))) }
+        if !isTop && !n.background.isEmpty && n.type != "button" && n.type != "bar" && n.type != "checkbox" && n.type != "toggle" {
+            view = AnyView(view.background(HSWStyle.background(n.background, radius: 14)))
+        }
+        if n.hasAction { view = action(view, n) }
+        return view
+    }
+
+    private func weighted(_ v: AnyView, _ n: HSWNode, horizontal: Bool) -> AnyView {
+        guard n.weight > 0 else { return v }
+        return horizontal ? AnyView(v.frame(maxWidth: .infinity, alignment: HSWStyle.frameAlign(n.align)))
+                          : AnyView(v.frame(maxHeight: .infinity, alignment: HSWStyle.frameAlign(n.align)))
+    }
+
+    private func actionDict(_ n: HSWNode) -> [String: Any] {
+        let dl = (n.raw["DeepLink"] as? String) ?? ""
+        return ["ActionType": n.raw["ActionType"] as? String ?? "openApp",
+                "ActionName": n.raw["ActionName"] as? String ?? "",
+                "RowId": n.id, "ButtonId": n.id,
+                "Payload": n.raw["Payload"] as? String ?? "",
+                "Url": n.raw["Url"] as? String ?? "",
+                "Method": n.raw["Method"] as? String ?? "",
+                "Body": n.raw["Body"] as? String ?? "",
+                "DeepLink": dl.isEmpty ? data.deepLink : dl]
+    }
+
+    private func action(_ v: AnyView, _ n: HSWNode) -> AnyView {
+        let type = (n.raw["ActionType"] as? String) ?? ""
+        if type.caseInsensitiveCompare("http") == .orderedSame {
+            if #available(iOSApplicationExtension 17.0, *) {
+                return AnyView(Button(intent: HSWHttpIntent(url: n.raw["Url"] as? String ?? "",
+                                                            method: n.raw["Method"] as? String ?? "",
+                                                            body: n.raw["Body"] as? String ?? "")) { v }
+                    .buttonStyle(.plain))
+            }
+        }
+        if let url = data.actionURL(actionDict(n)) {
+            return AnyView(Link(destination: url) { v })
+        }
+        return v
     }
 }
