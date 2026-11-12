@@ -126,6 +126,9 @@ final class WidgetTreeRenderer {
             root.setViewPadding(id("hswt_root_content"), pad, pad, pad, pad);
 
             RemoteViews content = node(top, true, DEFAULT_TEXT);
+            // The launcher re-applies an update with the same layout onto the views it already shows,
+            // so addView would append the new design below the previous one. Clear the old content first.
+            root.removeAllViews(id("hswt_root_content"));
             root.addView(id("hswt_root_content"), content);
 
             PendingIntent click = hasAction(top) ? action(top) : action(openAppNode());
