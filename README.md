@@ -46,3 +46,13 @@ Tapping a row sends `{ ActionType: "openApp", ActionName: "RowTap", RowId }`.
 - The App Group defaults to `group.<bundle id>`. Override it with the config.xml preference `HSWAppGroup`.
 - The widget extension (`<bundle id>.HomeWidget`, iOS 15+) is added by `hooks/ios/add_widget_extension.js`. It needs its own provisioning profile with the same App Group (optional preference `HSWWidgetProfile`).
 - Widget taps reach the app through the URL scheme `hsw-<app id>`.
+
+## Demo widgets (Android, 2.0.1)
+23 static design demos are included so you can see in the widget picker what this component can build:
+Weather, Forecast, Analog Clock, Digital Clock, Calendar, My Tasks, Fitness, Music, Battery, Quick Note,
+Account Balance, Flight, Ride Status, Top Story, Live Score, Smart Home, Inbox, Track Order, Storage & Memory,
+Focus Timer, Weather + Clock, Today Dashboard, Game Mode.
+
+- They are separate from the data-driven widget (`GenericWidgetProvider`) and never read or change its data.
+- Each one appears in the picker as "<Name> (Demo)". Tapping it opens the app.
+- Files: `src/android/demo/`, `res/android/*/hswd_*`. To remove them, delete the `HSW-DEMOS` block in `plugin.xml`.

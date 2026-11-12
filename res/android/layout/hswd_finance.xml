@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="horizontal"
+    android:id="@+id/hswd_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/hswd_bg_finance"
+    android:padding="14dp"
+    android:gravity="center_vertical">
+    <TextView
+        android:text="🏛"
+        android:textSize="28sp"
+        android:textColor="#FFFFFF"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:maxLines="2"
+        android:ellipsize="end" />
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="0dp"
+        android:layout_weight="1"
+        android:layout_marginStart="12dp"
+        android:layout_height="wrap_content">
+        <TextView
+            android:text="Account Balance"
+            android:textSize="12sp"
+            android:textColor="#D1FAE5"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxLines="2"
+            android:ellipsize="end" />
+        <TextView
+            android:text="₹ 1,24,500"
+            android:textSize="22sp"
+            android:textColor="#FFFFFF"
+            android:layout_marginTop="2dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            android:maxLines="2"
+            android:ellipsize="end" />
+    </LinearLayout>
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content">
+        <TextView
+            android:text="↗ Send"
+            android:textSize="12sp"
+            android:textColor="#FFFFFF"
+            android:background="@drawable/hswd_chip_white"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp" />
+        <TextView
+            android:text="▦ Scan"
+            android:textSize="12sp"
+            android:textColor="#FFFFFF"
+            android:layout_marginTop="6dp"
+            android:background="@drawable/hswd_chip_white"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp" />
+    </LinearLayout>
+</LinearLayout>
