@@ -25,7 +25,7 @@ import java.util.Map;
  * Renders WidgetData.Nodes (a flat list of nodes with Id / ParentId) as a native widget.
  *
  * Node types: row, column, stack (containers) and text, icon, image, ring, bar, divider, button,
- * checkbox, toggle, clock, spacer. Any node can carry an action (ActionType clientAction / http / openApp).
+ * checkbox, toggle, clock (Text = format, or "analog"), spacer. Any node can carry an action (ActionType clientAction / http / openApp).
  */
 final class WidgetTreeRenderer {
     static final int MAX_NODES = 80;
@@ -176,9 +176,15 @@ final class WidgetTreeRenderer {
                     applyPadding(v, rootId, n, -1);
                     break;
                 case "clock":
+                    String fmt = n.optString("Text", "");
+                    if (fmt.equalsIgnoreCase("analog")) {
+                        // Analog clock: the system draws the dial and hands; it updates by itself.
+                        v = new RemoteViews(pkg, layout("hswt_clock_analog"));
+                        rootId = id("hswt_v");
+                        break;
+                    }
                     v = new RemoteViews(pkg, layout(n.optBoolean("Bold", false) ? "hswt_clock_bold" : "hswt_clock"));
                     rootId = id("hswt_v");
-                    String fmt = n.optString("Text", "");
                     if (fmt.isEmpty()) fmt = "HH:mm";
                     v.setCharSequence(rootId, "setFormat12Hour", fmt);
                     v.setCharSequence(rootId, "setFormat24Hour", fmt);

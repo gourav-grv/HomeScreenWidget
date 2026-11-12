@@ -2,7 +2,7 @@
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
         xmlns:android="http://schemas.android.com/apk/res/android"
         id="cordova-plugin-homescreen-widget"
-        version="2.2.1">
+        version="2.3.0">
 
     <name>HomeScreenWidget</name>
     <description>Dynamic home screen widget (Android App Widget + iOS WidgetKit). The app pushes JSON (header + rows + buttons); buttons can call an HTTP endpoint, a client action in the app, or open the app.</description>
@@ -64,6 +64,7 @@
         <resource-file src="res/android/layout/hswt_bar.xml" target="res/layout/hswt_bar.xml" />
         <resource-file src="res/android/layout/hswt_button.xml" target="res/layout/hswt_button.xml" />
         <resource-file src="res/android/layout/hswt_check.xml" target="res/layout/hswt_check.xml" />
+        <resource-file src="res/android/layout/hswt_clock_analog.xml" target="res/layout/hswt_clock_analog.xml" />
         <resource-file src="res/android/layout/hswt_clock.xml" target="res/layout/hswt_clock.xml" />
         <resource-file src="res/android/layout/hswt_clock_bold.xml" target="res/layout/hswt_clock_bold.xml" />
         <resource-file src="res/android/layout/hswt_column.xml" target="res/layout/hswt_column.xml" />
@@ -103,207 +104,6 @@
         <resource-file src="res/android/xml/hsw_widget_info.xml" target="res/xml/hsw_widget_info.xml" />
         <resource-file src="res/android/values/hsw_strings.xml" target="res/values/hsw_strings.xml" />
         <resource-file src="res/android/values/hsw_styles.xml" target="res/values/hsw_styles.xml" />
-        <!-- HSW-DEMOS-START -->
-        <config-file target="AndroidManifest.xml" parent="/manifest/application">
-            <receiver android:name="io.homescreenwidget.plugin.HswDemo_weather" android:exported="true" android:label="@string/hswd_label_weather">
-                <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-                <meta-data android:name="android.appwidget.provider" android:resource="@xml/hswd_info_weather" />
-            </receiver>
-            <receiver android:name="io.homescreenwidget.plugin.HswDemo_forecast" android:exported="true" android:label="@string/hswd_label_forecast">
-                <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-                <meta-data android:name="android.appwidget.provider" android:resource="@xml/hswd_info_forecast" />
-            </receiver>
-            <receiver android:name="io.homescreenwidget.plugin.HswDemo_clock_analog" android:exported="true" android:label="@string/hswd_label_clock_analog">
-                <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-                <meta-data android:name="android.appwidget.provider" android:resource="@xml/hswd_info_clock_analog" />
-            </receiver>
-            <receiver android:name="io.homescreenwidget.plugin.HswDemo_clock_digital" android:exported="true" android:label="@string/hswd_label_clock_digital">
-                <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-                <meta-data android:name="android.appwidget.provider" android:resource="@xml/hswd_info_clock_digital" />
-            </receiver>
-            <receiver android:name="io.homescreenwidget.plugin.HswDemo_calendar" android:exported="true" android:label="@string/hswd_label_calendar">
-                <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-                <meta-data android:name="android.appwidget.provider" android:resource="@xml/hswd_info_calendar" />
-            </receiver>
-            <receiver android:name="io.homescreenwidget.plugin.HswDemo_tasks" android:exported="true" android:label="@string/hswd_label_tasks">
-                <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-                <meta-data android:name="android.appwidget.provider" android:resource="@xml/hswd_info_tasks" />
-            </receiver>
-            <receiver android:name="io.homescreenwidget.plugin.HswDemo_fitness" android:exported="true" android:label="@string/hswd_label_fitness">
-                <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-                <meta-data android:name="android.appwidget.provider" android:resource="@xml/hswd_info_fitness" />
-            </receiver>
-            <receiver android:name="io.homescreenwidget.plugin.HswDemo_music" android:exported="true" android:label="@string/hswd_label_music">
-                <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-                <meta-data android:name="android.appwidget.provider" android:resource="@xml/hswd_info_music" />
-            </receiver>
-            <receiver android:name="io.homescreenwidget.plugin.HswDemo_battery" android:exported="true" android:label="@string/hswd_label_battery">
-                <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-                <meta-data android:name="android.appwidget.provider" android:resource="@xml/hswd_info_battery" />
-            </receiver>
-            <receiver android:name="io.homescreenwidget.plugin.HswDemo_notes" android:exported="true" android:label="@string/hswd_label_notes">
-                <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-                <meta-data android:name="android.appwidget.provider" android:resource="@xml/hswd_info_notes" />
-            </receiver>
-            <receiver android:name="io.homescreenwidget.plugin.HswDemo_finance" android:exported="true" android:label="@string/hswd_label_finance">
-                <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-                <meta-data android:name="android.appwidget.provider" android:resource="@xml/hswd_info_finance" />
-            </receiver>
-            <receiver android:name="io.homescreenwidget.plugin.HswDemo_flight" android:exported="true" android:label="@string/hswd_label_flight">
-                <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-                <meta-data android:name="android.appwidget.provider" android:resource="@xml/hswd_info_flight" />
-            </receiver>
-            <receiver android:name="io.homescreenwidget.plugin.HswDemo_ride" android:exported="true" android:label="@string/hswd_label_ride">
-                <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-                <meta-data android:name="android.appwidget.provider" android:resource="@xml/hswd_info_ride" />
-            </receiver>
-            <receiver android:name="io.homescreenwidget.plugin.HswDemo_news" android:exported="true" android:label="@string/hswd_label_news">
-                <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-                <meta-data android:name="android.appwidget.provider" android:resource="@xml/hswd_info_news" />
-            </receiver>
-            <receiver android:name="io.homescreenwidget.plugin.HswDemo_sports" android:exported="true" android:label="@string/hswd_label_sports">
-                <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-                <meta-data android:name="android.appwidget.provider" android:resource="@xml/hswd_info_sports" />
-            </receiver>
-            <receiver android:name="io.homescreenwidget.plugin.HswDemo_smart_home" android:exported="true" android:label="@string/hswd_label_smart_home">
-                <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-                <meta-data android:name="android.appwidget.provider" android:resource="@xml/hswd_info_smart_home" />
-            </receiver>
-            <receiver android:name="io.homescreenwidget.plugin.HswDemo_email" android:exported="true" android:label="@string/hswd_label_email">
-                <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-                <meta-data android:name="android.appwidget.provider" android:resource="@xml/hswd_info_email" />
-            </receiver>
-            <receiver android:name="io.homescreenwidget.plugin.HswDemo_shopping" android:exported="true" android:label="@string/hswd_label_shopping">
-                <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-                <meta-data android:name="android.appwidget.provider" android:resource="@xml/hswd_info_shopping" />
-            </receiver>
-            <receiver android:name="io.homescreenwidget.plugin.HswDemo_system" android:exported="true" android:label="@string/hswd_label_system">
-                <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-                <meta-data android:name="android.appwidget.provider" android:resource="@xml/hswd_info_system" />
-            </receiver>
-            <receiver android:name="io.homescreenwidget.plugin.HswDemo_focus" android:exported="true" android:label="@string/hswd_label_focus">
-                <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-                <meta-data android:name="android.appwidget.provider" android:resource="@xml/hswd_info_focus" />
-            </receiver>
-            <receiver android:name="io.homescreenwidget.plugin.HswDemo_weather_clock" android:exported="true" android:label="@string/hswd_label_weather_clock">
-                <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-                <meta-data android:name="android.appwidget.provider" android:resource="@xml/hswd_info_weather_clock" />
-            </receiver>
-            <receiver android:name="io.homescreenwidget.plugin.HswDemo_dashboard" android:exported="true" android:label="@string/hswd_label_dashboard">
-                <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-                <meta-data android:name="android.appwidget.provider" android:resource="@xml/hswd_info_dashboard" />
-            </receiver>
-            <receiver android:name="io.homescreenwidget.plugin.HswDemo_game_mode" android:exported="true" android:label="@string/hswd_label_game_mode">
-                <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
-                <meta-data android:name="android.appwidget.provider" android:resource="@xml/hswd_info_game_mode" />
-            </receiver>
-        </config-file>
-        <source-file src="src/android/demo/HswDemoProvider.java" target-dir="src/io/homescreenwidget/plugin" />
-        <source-file src="src/android/demo/HswDemo_weather.java" target-dir="src/io/homescreenwidget/plugin" />
-        <source-file src="src/android/demo/HswDemo_forecast.java" target-dir="src/io/homescreenwidget/plugin" />
-        <source-file src="src/android/demo/HswDemo_clock_analog.java" target-dir="src/io/homescreenwidget/plugin" />
-        <source-file src="src/android/demo/HswDemo_clock_digital.java" target-dir="src/io/homescreenwidget/plugin" />
-        <source-file src="src/android/demo/HswDemo_calendar.java" target-dir="src/io/homescreenwidget/plugin" />
-        <source-file src="src/android/demo/HswDemo_tasks.java" target-dir="src/io/homescreenwidget/plugin" />
-        <source-file src="src/android/demo/HswDemo_fitness.java" target-dir="src/io/homescreenwidget/plugin" />
-        <source-file src="src/android/demo/HswDemo_music.java" target-dir="src/io/homescreenwidget/plugin" />
-        <source-file src="src/android/demo/HswDemo_battery.java" target-dir="src/io/homescreenwidget/plugin" />
-        <source-file src="src/android/demo/HswDemo_notes.java" target-dir="src/io/homescreenwidget/plugin" />
-        <source-file src="src/android/demo/HswDemo_finance.java" target-dir="src/io/homescreenwidget/plugin" />
-        <source-file src="src/android/demo/HswDemo_flight.java" target-dir="src/io/homescreenwidget/plugin" />
-        <source-file src="src/android/demo/HswDemo_ride.java" target-dir="src/io/homescreenwidget/plugin" />
-        <source-file src="src/android/demo/HswDemo_news.java" target-dir="src/io/homescreenwidget/plugin" />
-        <source-file src="src/android/demo/HswDemo_sports.java" target-dir="src/io/homescreenwidget/plugin" />
-        <source-file src="src/android/demo/HswDemo_smart_home.java" target-dir="src/io/homescreenwidget/plugin" />
-        <source-file src="src/android/demo/HswDemo_email.java" target-dir="src/io/homescreenwidget/plugin" />
-        <source-file src="src/android/demo/HswDemo_shopping.java" target-dir="src/io/homescreenwidget/plugin" />
-        <source-file src="src/android/demo/HswDemo_system.java" target-dir="src/io/homescreenwidget/plugin" />
-        <source-file src="src/android/demo/HswDemo_focus.java" target-dir="src/io/homescreenwidget/plugin" />
-        <source-file src="src/android/demo/HswDemo_weather_clock.java" target-dir="src/io/homescreenwidget/plugin" />
-        <source-file src="src/android/demo/HswDemo_dashboard.java" target-dir="src/io/homescreenwidget/plugin" />
-        <source-file src="src/android/demo/HswDemo_game_mode.java" target-dir="src/io/homescreenwidget/plugin" />
-        <resource-file src="res/android/drawable/hswd_bar_blue.xml" target="res/drawable/hswd_bar_blue.xml" />
-        <resource-file src="res/android/drawable/hswd_bar_green.xml" target="res/drawable/hswd_bar_green.xml" />
-        <resource-file src="res/android/drawable/hswd_bar_purple.xml" target="res/drawable/hswd_bar_purple.xml" />
-        <resource-file src="res/android/drawable/hswd_bg_art.xml" target="res/drawable/hswd_bg_art.xml" />
-        <resource-file src="res/android/drawable/hswd_bg_combo.xml" target="res/drawable/hswd_bg_combo.xml" />
-        <resource-file src="res/android/drawable/hswd_bg_dark.xml" target="res/drawable/hswd_bg_dark.xml" />
-        <resource-file src="res/android/drawable/hswd_bg_events.xml" target="res/drawable/hswd_bg_events.xml" />
-        <resource-file src="res/android/drawable/hswd_bg_finance.xml" target="res/drawable/hswd_bg_finance.xml" />
-        <resource-file src="res/android/drawable/hswd_bg_flight.xml" target="res/drawable/hswd_bg_flight.xml" />
-        <resource-file src="res/android/drawable/hswd_bg_focus.xml" target="res/drawable/hswd_bg_focus.xml" />
-        <resource-file src="res/android/drawable/hswd_bg_forecast.xml" target="res/drawable/hswd_bg_forecast.xml" />
-        <resource-file src="res/android/drawable/hswd_bg_game.xml" target="res/drawable/hswd_bg_game.xml" />
-        <resource-file src="res/android/drawable/hswd_bg_ink.xml" target="res/drawable/hswd_bg_ink.xml" />
-        <resource-file src="res/android/drawable/hswd_bg_music.xml" target="res/drawable/hswd_bg_music.xml" />
-        <resource-file src="res/android/drawable/hswd_bg_news_img.xml" target="res/drawable/hswd_bg_news_img.xml" />
-        <resource-file src="res/android/drawable/hswd_bg_note.xml" target="res/drawable/hswd_bg_note.xml" />
-        <resource-file src="res/android/drawable/hswd_bg_purple.xml" target="res/drawable/hswd_bg_purple.xml" />
-        <resource-file src="res/android/drawable/hswd_bg_sports.xml" target="res/drawable/hswd_bg_sports.xml" />
-        <resource-file src="res/android/drawable/hswd_bg_weather.xml" target="res/drawable/hswd_bg_weather.xml" />
-        <resource-file src="res/android/drawable/hswd_bg_white.xml" target="res/drawable/hswd_bg_white.xml" />
-        <resource-file src="res/android/drawable/hswd_chip_accent.xml" target="res/drawable/hswd_chip_accent.xml" />
-        <resource-file src="res/android/drawable/hswd_chip_red.xml" target="res/drawable/hswd_chip_red.xml" />
-        <resource-file src="res/android/drawable/hswd_chip_white.xml" target="res/drawable/hswd_chip_white.xml" />
-        <resource-file src="res/android/drawable/hswd_circle_accent.xml" target="res/drawable/hswd_circle_accent.xml" />
-        <resource-file src="res/android/drawable/hswd_circle_white.xml" target="res/drawable/hswd_circle_white.xml" />
-        <resource-file src="res/android/drawable/hswd_dot_white.xml" target="res/drawable/hswd_dot_white.xml" />
-        <resource-file src="res/android/drawable/hswd_ring_cyan.xml" target="res/drawable/hswd_ring_cyan.xml" />
-        <resource-file src="res/android/drawable/hswd_ring_green.xml" target="res/drawable/hswd_ring_green.xml" />
-        <resource-file src="res/android/drawable/hswd_ring_mint.xml" target="res/drawable/hswd_ring_mint.xml" />
-        <resource-file src="res/android/drawable/hswd_tile_dark.xml" target="res/drawable/hswd_tile_dark.xml" />
-        <resource-file src="res/android/drawable/hswd_tile_glass.xml" target="res/drawable/hswd_tile_glass.xml" />
-        <resource-file src="res/android/drawable/hswd_tile_light.xml" target="res/drawable/hswd_tile_light.xml" />
-        <resource-file src="res/android/drawable/hswd_today.xml" target="res/drawable/hswd_today.xml" />
-        <resource-file src="res/android/drawable/hswd_toggle_on.xml" target="res/drawable/hswd_toggle_on.xml" />
-        <resource-file src="res/android/layout/hswd_weather.xml" target="res/layout/hswd_weather.xml" />
-        <resource-file src="res/android/xml/hswd_info_weather.xml" target="res/xml/hswd_info_weather.xml" />
-        <resource-file src="res/android/layout/hswd_forecast.xml" target="res/layout/hswd_forecast.xml" />
-        <resource-file src="res/android/xml/hswd_info_forecast.xml" target="res/xml/hswd_info_forecast.xml" />
-        <resource-file src="res/android/layout/hswd_clock_analog.xml" target="res/layout/hswd_clock_analog.xml" />
-        <resource-file src="res/android/xml/hswd_info_clock_analog.xml" target="res/xml/hswd_info_clock_analog.xml" />
-        <resource-file src="res/android/layout/hswd_clock_digital.xml" target="res/layout/hswd_clock_digital.xml" />
-        <resource-file src="res/android/xml/hswd_info_clock_digital.xml" target="res/xml/hswd_info_clock_digital.xml" />
-        <resource-file src="res/android/layout/hswd_calendar.xml" target="res/layout/hswd_calendar.xml" />
-        <resource-file src="res/android/xml/hswd_info_calendar.xml" target="res/xml/hswd_info_calendar.xml" />
-        <resource-file src="res/android/layout/hswd_tasks.xml" target="res/layout/hswd_tasks.xml" />
-        <resource-file src="res/android/xml/hswd_info_tasks.xml" target="res/xml/hswd_info_tasks.xml" />
-        <resource-file src="res/android/layout/hswd_fitness.xml" target="res/layout/hswd_fitness.xml" />
-        <resource-file src="res/android/xml/hswd_info_fitness.xml" target="res/xml/hswd_info_fitness.xml" />
-        <resource-file src="res/android/layout/hswd_music.xml" target="res/layout/hswd_music.xml" />
-        <resource-file src="res/android/xml/hswd_info_music.xml" target="res/xml/hswd_info_music.xml" />
-        <resource-file src="res/android/layout/hswd_battery.xml" target="res/layout/hswd_battery.xml" />
-        <resource-file src="res/android/xml/hswd_info_battery.xml" target="res/xml/hswd_info_battery.xml" />
-        <resource-file src="res/android/layout/hswd_notes.xml" target="res/layout/hswd_notes.xml" />
-        <resource-file src="res/android/xml/hswd_info_notes.xml" target="res/xml/hswd_info_notes.xml" />
-        <resource-file src="res/android/layout/hswd_finance.xml" target="res/layout/hswd_finance.xml" />
-        <resource-file src="res/android/xml/hswd_info_finance.xml" target="res/xml/hswd_info_finance.xml" />
-        <resource-file src="res/android/layout/hswd_flight.xml" target="res/layout/hswd_flight.xml" />
-        <resource-file src="res/android/xml/hswd_info_flight.xml" target="res/xml/hswd_info_flight.xml" />
-        <resource-file src="res/android/layout/hswd_ride.xml" target="res/layout/hswd_ride.xml" />
-        <resource-file src="res/android/xml/hswd_info_ride.xml" target="res/xml/hswd_info_ride.xml" />
-        <resource-file src="res/android/layout/hswd_news.xml" target="res/layout/hswd_news.xml" />
-        <resource-file src="res/android/xml/hswd_info_news.xml" target="res/xml/hswd_info_news.xml" />
-        <resource-file src="res/android/layout/hswd_sports.xml" target="res/layout/hswd_sports.xml" />
-        <resource-file src="res/android/xml/hswd_info_sports.xml" target="res/xml/hswd_info_sports.xml" />
-        <resource-file src="res/android/layout/hswd_smart_home.xml" target="res/layout/hswd_smart_home.xml" />
-        <resource-file src="res/android/xml/hswd_info_smart_home.xml" target="res/xml/hswd_info_smart_home.xml" />
-        <resource-file src="res/android/layout/hswd_email.xml" target="res/layout/hswd_email.xml" />
-        <resource-file src="res/android/xml/hswd_info_email.xml" target="res/xml/hswd_info_email.xml" />
-        <resource-file src="res/android/layout/hswd_shopping.xml" target="res/layout/hswd_shopping.xml" />
-        <resource-file src="res/android/xml/hswd_info_shopping.xml" target="res/xml/hswd_info_shopping.xml" />
-        <resource-file src="res/android/layout/hswd_system.xml" target="res/layout/hswd_system.xml" />
-        <resource-file src="res/android/xml/hswd_info_system.xml" target="res/xml/hswd_info_system.xml" />
-        <resource-file src="res/android/layout/hswd_focus.xml" target="res/layout/hswd_focus.xml" />
-        <resource-file src="res/android/xml/hswd_info_focus.xml" target="res/xml/hswd_info_focus.xml" />
-        <resource-file src="res/android/layout/hswd_weather_clock.xml" target="res/layout/hswd_weather_clock.xml" />
-        <resource-file src="res/android/xml/hswd_info_weather_clock.xml" target="res/xml/hswd_info_weather_clock.xml" />
-        <resource-file src="res/android/layout/hswd_dashboard.xml" target="res/layout/hswd_dashboard.xml" />
-        <resource-file src="res/android/xml/hswd_info_dashboard.xml" target="res/xml/hswd_info_dashboard.xml" />
-        <resource-file src="res/android/layout/hswd_game_mode.xml" target="res/layout/hswd_game_mode.xml" />
-        <resource-file src="res/android/xml/hswd_info_game_mode.xml" target="res/xml/hswd_info_game_mode.xml" />
-        <resource-file src="res/android/values/hswd_strings.xml" target="res/values/hswd_strings.xml" />
-        <!-- HSW-DEMOS-END -->
     </platform>
 
     <!-- ===================================================== iOS -->

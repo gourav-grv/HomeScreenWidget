@@ -623,7 +623,8 @@ struct HSWTreeView: View {
         case "clock":
             let size = CGFloat(n.fontSize > 0 ? n.fontSize : 28)
             let fmt = n.text.lowercased()
-            let isDate = fmt.contains("d") || fmt.contains("e") || fmt.contains("m") && !fmt.contains(":")
+            // "analog" has no live analog clock in WidgetKit: show the live time instead.
+            let isDate = fmt != "analog" && (fmt.contains("d") || fmt.contains("e") || (fmt.contains("m") && !fmt.contains(":")))
             view = AnyView(Group {
                 if isDate {
                     Text(Date(), style: .date)
